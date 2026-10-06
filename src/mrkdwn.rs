@@ -353,9 +353,298 @@ fn display_width(s: &str) -> usize {
     s.chars().filter(|c| !matches!(c, '*' | '`' | '_')).count()
 }
 
+// ------------------------------------------------------- mrkdwn -> Markdown
+
+/// Resolves Slack ids while rendering a message back to Markdown.
+///
+/// A lookup that returns `None` leaves the raw `<@U…>` in place: a wrong name is worse
+/// than an unresolved id, and name lookups are allowed to fail (scope, rate limit).
+pub trait Names {
+    fn user(&self, id: &str) -> Option<String>;
+    fn channel(&self, id: &str) -> Option<String>;
+}
+
+/// Resolves nothing; ids stay as Slack wrote them.
+#[cfg(test)]
+pub struct NoNames;
+
+#[cfg(test)]
+impl Names for NoNames {
+    fn user(&self, _id: &str) -> Option<String> {
+        None
+    }
+    fn channel(&self, _id: &str) -> Option<String> {
+        None
+    }
+}
+
+/// Convert a Slack message's `text` back to readable Markdown.
+pub fn from_mrkdwn(src: &str, names: &dyn Names) -> String {
+    let mut vault = Vault::new();
+
+    let s = src.replace("\r\n", "\n");
+    let s = unprotect_code(&s, &mut vault);
+    let s = entities(&s, names, &mut vault);
+    let s = emphasis(&s);
+    let s = unline_blocks(&s);
+    let s = unescape(&s);
+    vault.restore(&s)
+}
+
+/// Undoes Slack's three required escapes, in one pass so `&amp;lt;` stays `&lt;`.
+fn unescape(s: &str) -> String {
+    if !s.contains('&') {
+        return s.to_string();
+    }
+    let mut out = String::with_capacity(s.len());
+    let mut rest = s;
+    while let Some(i) = rest.find('&') {
+        out.push_str(&rest[..i]);
+        let tail = &rest[i..];
+        if let Some(r) = tail.strip_prefix("&amp;") {
+            out.push('&');
+            rest = r;
+        } else if let Some(r) = tail.strip_prefix("&lt;") {
+            out.push('<');
+            rest = r;
+        } else if let Some(r) = tail.strip_prefix("&gt;") {
+            out.push('>');
+            rest = r;
+        } else {
+            out.push('&');
+            rest = &tail[1..];
+        }
+    }
+    out.push_str(rest);
+    out
+}
+
+/// Stashes code spans and fenced blocks whole, so nothing below rewrites their contents.
+/// Only the transport escaping is undone inside them — `&lt;` was never source text.
+fn unprotect_code(s: &str, vault: &mut Vault) -> String {
+    let mut out = String::with_capacity(s.len());
+    let mut rest = s;
+    while let Some(start) = rest.find("```") {
+        out.push_str(&rest[..start]);
+        let after = &rest[start + 3..];
+        match after.find("```") {
+            Some(end) => {
+                out.push_str(&vault.stash(format!("```{}```", unescape(&after[..end]))));
+                rest = &after[end + 3..];
+            }
+            // Unterminated fence: leave the rest alone rather than swallowing it.
+            None => {
+                out.push_str(&rest[start..]);
+                rest = "";
+                break;
+            }
+        }
+    }
+    out.push_str(rest);
+
+    re!(r"`([^`\n]+)`")
+        .replace_all(&out, |c: &Captures| {
+            vault.stash(format!("`{}`", unescape(&c[1])))
+        })
+        .into_owned()
+}
+
+/// `<@U…>`, `<#C…|name>`, `<!here>` and `<url|text>` back to something a person can read.
+fn entities(s: &str, names: &dyn Names, vault: &mut Vault) -> String {
+    re!(r"<([^<>\n]*)>")
+        .replace_all(s, |c: &Captures| {
+            let raw = &c[0];
+            let (body, label) = match c[1].split_once('|') {
+                Some((b, l)) => (b, Some(l)),
+                None => (&c[1], None),
+            };
+            let label = label.map(unescape).filter(|l| !l.is_empty());
+            let out = match body.chars().next() {
+                Some('@') => match label.or_else(|| names.user(&body[1..])) {
+                    Some(n) => format!("@{}", n.trim_start_matches('@')),
+                    None => raw.to_string(),
+                },
+                Some('#') => match label.or_else(|| names.channel(&body[1..])) {
+                    Some(n) => format!("#{}", n.trim_start_matches('#')),
+                    None => raw.to_string(),
+                },
+                Some('!') => match &body[1..] {
+                    broadcast @ ("here" | "channel" | "everyone") => format!("@{broadcast}"),
+                    _ => match label {
+                        Some(l) => l,
+                        None => raw.to_string(),
+                    },
+                },
+                _ if is_url(body) => link_markdown(&unescape(body), label),
+                // Not a Slack entity after all (a stray angle bracket); leave it be.
+                _ => raw.to_string(),
+            };
+            vault.stash(out)
+        })
+        .into_owned()
+}
+
+/// User ids mentioned in a message, so a read can warm the name cache in one call.
+pub fn mentioned_user_ids(s: &str) -> Vec<String> {
+    re!(r"<@([UW][A-Z0-9]+)")
+        .captures_iter(s)
+        .map(|c| c[1].to_string())
+        .collect()
+}
+
+fn is_url(s: &str) -> bool {
+    s.contains("://") || s.starts_with("mailto:") || s.starts_with("tel:")
+}
+
+fn link_markdown(url: &str, label: Option<String>) -> String {
+    match label {
+        // Slack labels a bare link with the link itself; that is not a Markdown link.
+        Some(l) if l == url || Some(l.as_str()) == url.strip_prefix("mailto:") => l,
+        Some(l) => format!("[{l}]({url})"),
+        None => url.to_string(),
+    }
+}
+
+/// `*bold*` -> `**bold**` and `~struck~` -> `~~struck~~`; `_italic_` already is Markdown.
+fn emphasis(s: &str) -> String {
+    let s = re!(r"\*([^\s*][^*\n]*[^\s*]|[^\s*])\*")
+        .replace_all(s, "**$1**")
+        .into_owned();
+    re!(r"~([^\s~][^~\n]*[^\s~]|[^\s~])~")
+        .replace_all(&s, "~~$1~~")
+        .into_owned()
+}
+
+/// Bullets, task marks and the drawn horizontal rule, back to their Markdown spelling.
+fn unline_blocks(s: &str) -> String {
+    let bullet = re!(r"^(\s*)([\x{2022}\x{25E6}\x{25AA}])\s+(.*)$");
+    let task = re!(r"^([\x{2611}\x{2610}])\s+(.*)$");
+
+    let mut out: Vec<String> = Vec::new();
+    for line in s.split('\n') {
+        if line.starts_with(PH_OPEN) {
+            out.push(line.to_string());
+            continue;
+        }
+        if let Some(c) = bullet.captures(line) {
+            let depth = match &c[2] {
+                "\u{2022}" => 0,
+                "\u{25E6}" => 1,
+                _ => 2,
+            };
+            let mut body = c[3].to_string();
+            if let Some(t) = task.captures(&body.clone()) {
+                let mark = if &t[1] == "\u{2611}" { "x" } else { " " };
+                body = format!("[{mark}] {}", &t[2]);
+            }
+            out.push(format!("{}- {body}", "  ".repeat(depth)));
+            continue;
+        }
+        if is_drawn_rule(line) {
+            out.push("---".to_string());
+            continue;
+        }
+        out.push(line.to_string());
+    }
+    out.join("\n")
+}
+
+fn is_drawn_rule(line: &str) -> bool {
+    let t = line.trim();
+    t.chars().count() >= 3 && t.chars().all(|c| c == '\u{2500}')
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// A lookup with a couple of known ids, for the mention tests.
+    struct TestNames;
+
+    impl Names for TestNames {
+        fn user(&self, id: &str) -> Option<String> {
+            (id == "U01ABCDEF").then(|| "alice".to_string())
+        }
+        fn channel(&self, id: &str) -> Option<String> {
+            (id == "C0123").then(|| "dev".to_string())
+        }
+    }
+
+    fn back(s: &str) -> String {
+        from_mrkdwn(s, &NoNames)
+    }
+
+    #[test]
+    fn reverse_emphasis() {
+        assert_eq!(back("*bold*"), "**bold**");
+        assert_eq!(back("_italic_"), "_italic_");
+        assert_eq!(back("~gone~"), "~~gone~~");
+        assert_eq!(back("*_both_*"), "**_both_**");
+        assert_eq!(back("2 * 3 * 4"), "2 * 3 * 4");
+    }
+
+    #[test]
+    fn reverse_links_and_escapes() {
+        assert_eq!(back("<https://x.dev|docs>"), "[docs](https://x.dev)");
+        assert_eq!(back("<https://x.dev>"), "https://x.dev");
+        assert_eq!(back("<https://x.dev|https://x.dev>"), "https://x.dev");
+        assert_eq!(back("<mailto:a@b.dev|a@b.dev>"), "a@b.dev");
+        assert_eq!(back("a &lt; b &amp; c &gt; d"), "a < b & c > d");
+        assert_eq!(back("&amp;lt; stays"), "&lt; stays");
+    }
+
+    #[test]
+    fn reverse_mentions() {
+        assert_eq!(
+            from_mrkdwn("hi <@U01ABCDEF> in <#C0123|dev>", &TestNames),
+            "hi @alice in #dev"
+        );
+        assert_eq!(from_mrkdwn("hi <#C0123>", &TestNames), "hi #dev");
+        assert_eq!(from_mrkdwn("<!here> look", &TestNames), "@here look");
+        assert_eq!(
+            from_mrkdwn("<!subteam^S1|@eng> look", &TestNames),
+            "@eng look"
+        );
+        // Unknown ids degrade to what Slack sent rather than guessing a name.
+        assert_eq!(back("hi <@U01ABCDEF>"), "hi <@U01ABCDEF>");
+        assert_eq!(back("hi <@U9|alice>"), "hi @alice");
+    }
+
+    #[test]
+    fn reverse_lists_and_rules() {
+        assert_eq!(back("• one\n• two"), "- one\n- two");
+        assert_eq!(back("    ◦ nested"), "  - nested");
+        assert_eq!(back("• ☑ done\n• ☐ todo"), "- [x] done\n- [ ] todo");
+        assert_eq!(back("────────────────────"), "---");
+        assert_eq!(back("> quoted"), "> quoted");
+        assert_eq!(back("&gt; quoted"), "> quoted");
+    }
+
+    #[test]
+    fn reverse_leaves_code_alone() {
+        assert_eq!(back("`a *b* &lt;c&gt;`"), "`a *b* <c>`");
+        assert_eq!(
+            back("```\n• not a bullet\nlet x = a &lt; b;\n```"),
+            "```\n• not a bullet\nlet x = a < b;\n```"
+        );
+        assert_eq!(back("before ```*x*``` after"), "before ```*x*``` after");
+        assert_eq!(back("unclosed ``` *x*"), "unclosed ``` **x**");
+    }
+
+    #[test]
+    fn round_trips() {
+        for src in [
+            "**bold** and _soft_ and ~~gone~~",
+            "- one\n- two\n- [x] done",
+            "a < b & c > d",
+            "[docs](https://x.dev) then more",
+            "```\nlet x = a < b;\n```",
+            "> quoted line",
+            "1. first\n2. second",
+        ] {
+            assert_eq!(back(&to_mrkdwn(src)), src, "round trip of {src:?}");
+        }
+    }
 
     #[test]
     fn bold_italic_and_strike() {

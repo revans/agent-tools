@@ -1,7 +1,8 @@
 # notif
 
-Post Markdown to Slack from the command line. Accounts, channels and
-credentials live in one external TOML file, so you address a message by name:
+Post Markdown to Slack from the command line, read a channel back, and reply in
+thread. Accounts, channels and credentials live in one external TOML file, so
+you address a message by name:
 
 ```bash
 notif post --account gierd --channel releases --template deploy \
@@ -63,8 +64,9 @@ holding inline tokens is group- or world-readable.
 prints a `[channels]` table ready to paste.
 
 The Slack app needs `chat:write` (plus `chat:write.customize` if you override
-the sender name or icon, and `channels:read`/`groups:read` for `discover`), and
-must be invited to each channel.
+the sender name or icon, `channels:read`/`groups:read` for `discover`, and
+`channels:history`/`groups:history` plus `users:read` for `read` and `thread`),
+and must be invited to each channel it posts to or reads.
 
 ## Templates
 
@@ -98,6 +100,8 @@ defaults that a command-line flag overrides.
 | --- | --- |
 | `notif post` | render and send |
 | `notif render` | render to Slack mrkdwn on stdout, send nothing |
+| `notif read` | recent messages from a channel, newest last |
+| `notif thread` | one thread, parent message first |
 | `notif accounts` | list configured workspaces |
 | `notif channels [account]` | list that account's channels |
 | `notif templates` | list templates with their variables |
@@ -107,11 +111,39 @@ defaults that a command-line flag overrides.
 | `notif where` | show the config and template paths in use |
 
 Every listing command takes `--json`. `notif post --json` returns the message
-`ts` and permalink.
+`ts`, `thread_ts` and permalink.
 
 Message sources, in place of `--template`: `--file <path>`, `--text <markdown>`,
-or Markdown piped on stdin. Useful flags: `--dry-run`, `--thread <ts>`,
-`--broadcast`, `--no-unfurl`, `--username`, `--icon-emoji`, `--raw`.
+or Markdown piped on stdin. Useful flags: `--dry-run`,
+`--reply-to <permalink|ts>`, `--thread <ts>`, `--broadcast`, `--no-unfurl`,
+`--username`, `--icon-emoji`, `--raw`.
+
+## Reading and replying
+
+```bash
+notif read -a gierd -c alerts                     # 20 most recent, oldest first
+notif read -c alerts -n 50 --since 2025-01-13     # a ts or an ISO-8601 date/datetime
+notif read -c alerts --json                       # ts, iso_time, author, markdown, permalink
+notif thread -c alerts 1718031234.567890          # one thread, parent first
+```
+
+A read prints each message's author, local time, `ts`, reply count and text
+converted back to Markdown. `--raw` prints Slack's `mrkdwn` verbatim and
+resolves no user ids; `--since` / `--until` bound the range.
+
+Replying needs only something the user can see — a `ts` from a read, or a
+permalink, which also says which channel it is in:
+
+```bash
+notif post -c alerts --reply-to 1718031234.567890 --text 'On it'
+notif post --reply-to 'https://gierd.slack.com/archives/C0100000001/p1718031234567890' \
+           --text 'On it'
+```
+
+`--reply-to` follows a message to its thread, so replying to a reply lands in
+the same thread rather than starting a new one. It cannot be combined with
+`--thread`, and it fails rather than guessing if `--channel` disagrees with the
+permalink.
 
 ## Markdown handling
 
@@ -122,13 +154,18 @@ real broadcast, and `&`/`<`/`>` are escaped. Code spans and fenced blocks are
 passed through untouched, as are hand-written Slack entities like `<@U123>`.
 `--raw` skips conversion entirely.
 
+Reading runs the same mapping backwards: `*bold*` comes back as `**bold**`,
+`<url|text>` as `[text](url)`, `•` as `-`, and `<@U01ABCDEF>` as `@alice` (ids
+that cannot be resolved stay as they are). Code spans and blocks are untouched
+in both directions.
+
 See `skills/slack-post/references/mrkdwn.md` for the full table.
 
 ## Claude Code skill
 
 `skills/slack-post/` is a skill that teaches an agent to use this CLI — how to
-look up accounts and channels, pick a template, preview with `--dry-run` and
-report the permalink. Install it with:
+look up accounts and channels, pick a template, preview with `--dry-run`, report
+the permalink, read a channel and reply in thread. Install it with:
 
 ```bash
 ln -s "$PWD/skills/slack-post" ~/.claude/skills/slack-post

@@ -17,7 +17,7 @@ default_account = "gierd"
 # template_dir = "~/.config/notif/templates"   # default: <config dir>/templates
 
 [accounts.gierd]                 # the key is how you address it: --account gierd
-workspace = "gierd.slack.com"    # informational
+workspace = "gierd.slack.com"    # also builds permalinks for `notif read`
 token = "xoxb-…"                 # exactly one token source, see below
 default_channel = "general"
 
@@ -63,8 +63,19 @@ workspace. Scopes:
 - `chat:write` — required, to post.
 - `chat:write.customize` — only if you set `username` / `icon_emoji`.
 - `channels:read` (plus `groups:read` for private) — only for `notif discover`.
+- `channels:history` — for `notif read` and `notif thread`, and for `--reply-to`
+  to tell whether the message it was given is itself a reply.
+- `groups:history` — the same, for private channels (`im:history` /
+  `mpim:history` for DMs and group DMs).
+- `users:read` — turns `<@U01ABCDEF>` into `@alice` when reading. Without it
+  reading still works and the raw ids are left in place.
 
-The bot must be a member of each channel it posts to: `/invite @your-app`.
+The bot must be a member of each channel it posts to **or reads**:
+`/invite @your-app`. Reading a channel the bot is not in fails with
+`not_in_channel`, not with an empty list.
+
+After adding a scope, reinstall the app in the workspace — an existing token
+does not pick up new scopes.
 
 ## Filling in channel ids
 
@@ -76,3 +87,6 @@ notif check                       # auth.test every account
 
 Ids are stabler than names — a renamed channel keeps its id — which is why the
 config maps your own short name onto an id.
+
+`workspace = "gierd.slack.com"` is informational for posting, but `notif read`
+uses it to build each message's permalink locally, so it is worth setting.

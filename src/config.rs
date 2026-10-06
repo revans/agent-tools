@@ -26,7 +26,8 @@ pub struct Config {
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Account {
-    /// Purely informational, e.g. "gierd.slack.com".
+    /// e.g. "gierd.slack.com". Informational for posting; `notif read` builds each
+    /// message's permalink from it.
     #[serde(default)]
     pub workspace: Option<String>,
     /// Bot/user token (`xoxb-…` / `xoxp-…`). Exactly one token source is required.
@@ -307,6 +308,15 @@ impl Account {
             "unknown channel \"{key}\" for account \"{account_name}\"; known channels: {}",
             self.channel_names().join(", ")
         )
+    }
+
+    /// The friendly key for a channel id, so a message permalink picks up that
+    /// channel's configured overrides instead of being treated as an ad-hoc id.
+    pub fn channel_key_for_id(&self, id: &str) -> Option<&str> {
+        self.channels
+            .iter()
+            .find(|(_, entry)| entry.id().eq_ignore_ascii_case(id))
+            .map(|(key, _)| key.as_str())
     }
 
     pub fn channel_names(&self) -> Vec<&str> {

@@ -1,15 +1,15 @@
 ---
 name: slack-post
-description: Post Markdown messages to Slack with the `notif` CLI. Use whenever the user wants something sent, posted, announced, or shared to Slack — a channel, a workspace, a deploy/release note, an incident update, a standup, a status report, a summary of work just finished, or "tell the team". Also use to list configured Slack accounts/channels/templates, to check Slack credentials, or to create and edit `notif` Markdown templates.
+description: Post Markdown messages to Slack, read a channel or thread, and reply in thread with the `notif` CLI. Use whenever the user wants something sent, posted, announced, or shared to Slack — a channel, a workspace, a deploy/release note, an incident update, a standup, a status report, a summary of work just finished, or "tell the team". Also use to read, catch up on or summarise what was said in a Slack channel or thread, to reply to a message in its thread, to list configured Slack accounts/channels/templates, to check Slack credentials, or to create and edit `notif` Markdown templates.
 allowed-tools: Bash, Read, Write, Edit, Glob
 ---
 
-# Posting to Slack with `notif`
+# Posting to and reading Slack with `notif`
 
 `notif` is a Rust CLI that renders a Markdown template and posts it to a named
-Slack workspace and channel. Accounts, channels and credentials live in one
-external TOML file; nothing is hard-coded and no token is ever passed on the
-command line.
+Slack workspace and channel, and reads messages back out of one. Accounts,
+channels and credentials live in one external TOML file; nothing is hard-coded
+and no token is ever passed on the command line.
 
 Addressing is always **account + channel**, both by friendly name:
 `--account gierd` is `gierd.slack.com`, `--channel releases` is whatever id that
@@ -85,10 +85,80 @@ you cannot invent a token.
 
 4. **Post, then report the link.** `notif post … --json` returns
    `{"ok":true,"channel":…,"ts":…,"permalink":…}`. Give the user the permalink.
-   Keep the `ts` if you may need to reply in-thread: `--thread <ts>`.
+   Keep the `ts` if you may need to reply in-thread: `--reply-to <ts>`.
 
 Posting is irreversible and visible to other people. Post once; if a command
 seems to hang, check Slack before retrying rather than sending a duplicate.
+
+## Reading a channel
+
+`notif read` fetches recent messages. Addressing is exactly the same as posting
+— same account keys, same channel keys, same default channel:
+
+```bash
+notif read -a gierd -c alerts            # 20 most recent, oldest at the top
+notif read -c alerts -n 50               # more of them
+notif read -c alerts --since 2025-01-13  # since a date, or an ISO datetime, or a ts
+notif read -c alerts --since 2025-01-13T09:00:00Z --until 2025-01-13T17:00:00Z
+```
+
+Each message prints the author, the local time, its `ts`, the text converted
+back to Markdown, and `↳ N replies` when it has a thread. `--raw` prints
+Slack's own `mrkdwn` instead and resolves no names.
+
+To work with the messages rather than read them, use `--json`:
+
+```json
+{"ok":true,"account":"gierd","channel":"C0100000001","channel_key":"alerts",
+ "count":2,"messages":[{"ts":"1718031234.567890","iso_time":"2024-06-10T08:53:54-06:00",
+ "user_id":"U01ABCDEF","user_name":"alice","text":"Deployed *api*","markdown":"Deployed **api**",
+ "thread_ts":null,"reply_count":3,"permalink":"https://gierd.slack.com/archives/…"}]}
+```
+
+`permalink` is only filled in when the account sets `workspace` in the config.
+
+Reading needs the bot to be **in** the channel and the app to have
+`channels:history` (`groups:history` for private channels). `users:read` is
+what turns `<@U01ABCDEF>` into `@alice`; without it the raw id is shown rather
+than a guess.
+
+Summarising a channel: read it with `--json`, then say what happened in your own
+words. Do not paste the whole transcript back at the user.
+
+## Replying in a thread
+
+The useful loop is **read → pick a `ts` → `--reply-to`**:
+
+```bash
+notif read -c alerts --json                      # find the message, copy its "ts"
+notif post -c alerts --reply-to 1718031234.567890 --text 'Looking at it now'
+```
+
+A Slack permalink works in place of the `ts`, and carries the channel with it,
+so a message the user pasted needs nothing else:
+
+```bash
+notif post --reply-to 'https://gierd.slack.com/archives/C0100000001/p1718031234567890' \
+           --text 'On it — deploying the fix.'
+```
+
+- If `--channel` is also given and points somewhere else, the command fails
+  rather than guessing. Drop one of the two.
+- Replying to a message that is itself a reply puts your message in that same
+  thread, not in a new one.
+- Add `--broadcast` to also show the reply in the channel. Use it sparingly —
+  it notifies everyone in the channel.
+- `--thread <ts>` is the lower-level form and still works; `--reply-to` is the
+  one to reach for, because it also takes a permalink.
+
+To read one thread, with the parent message first:
+
+```bash
+notif thread -c alerts 1718031234.567890
+notif thread 'https://gierd.slack.com/archives/C0100000001/p1718031234567890' --json
+```
+
+A permalink to any reply in a thread resolves to the whole thread.
 
 ## Writing the Markdown
 
@@ -136,9 +206,11 @@ with `notif render -t <name> -v …` before posting with it.
 | --- | --- |
 | `unknown account` / `unknown channel` | List them and ask; do not guess an id. |
 | `missing values for: …` | Supply those `--var`s; ask the user if you cannot derive them. |
-| `not_in_channel` | The bot is not in that channel — ask the user to `/invite` it. |
+| `not_in_channel` | The bot is not in that channel — ask the user to `/invite` it. Reading needs this too. |
+| `message_not_found` / `thread_not_found` | That `ts` is not in that channel. Re-read the channel and take the `ts` from the output. |
 | `invalid_auth` / `token_revoked` | The stored token is bad. Tell the user; never edit a token yourself. |
 | `missing_scope` | The named scope must be added to the Slack app and the app reinstalled. |
 
-Config layout, token sources and multi-workspace setup are in
-`references/config.md`. Full flag list: `notif post --help`.
+Config layout, token sources, scopes and multi-workspace setup are in
+`references/config.md`. Full flag lists: `notif post --help`,
+`notif read --help`, `notif thread --help`.

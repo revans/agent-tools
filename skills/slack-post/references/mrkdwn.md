@@ -40,9 +40,41 @@ Notes:
 - **Slack caps a message at 40,000 characters** and `notif` refuses longer ones.
   Split the message or link out instead.
 
+## Reading: `mrkdwn` back to Markdown
+
+`notif read` and `notif thread` run the mapping the other way before printing a
+message, so what you see is Markdown again:
+
+| Slack stores | `notif` shows |
+| --- | --- |
+| `*bold*` | `**bold**` |
+| `_italic_` | `_italic_` |
+| `~struck~` | `~~struck~~` |
+| `<https://x\|text>` | `[text](https://x)` |
+| `<https://x>` | `https://x` |
+| `<mailto:a@b\|a@b>` | `a@b` |
+| `• item`, `◦ item` | `- item`, nested `  - item` |
+| `☑` / `☐` | `- [x]` / `- [ ]` |
+| the drawn horizontal line | `---` |
+| `&amp;`, `&lt;`, `&gt;` | `&`, `<`, `>` |
+| `<@U01ABCDEF>` | `@alice` (via `users.info`, cached per run) |
+| `<#C0123\|dev>` | `#dev` |
+| `<!here>`, `<!channel>` | `@here`, `@channel` |
+| `` `code` `` and ```` ```blocks``` ```` | left alone, contents never rewritten |
+
+Notes:
+
+- **Headings do not come back.** The forward direction flattens them to bold, so
+  a heading reads as `**Heading**`.
+- **An unresolvable id stays raw.** If `users:read` is missing or the lookup
+  fails, you get `<@U01ABCDEF>` rather than an invented name.
+- **`--raw` on `read`/`thread` skips all of this** and prints exactly what the
+  API returned, which is what you want when debugging a message's markup.
+
 Check any of this without posting:
 
 ```bash
 notif render -t deploy -v service=api -v version=v1
 echo '## Hi **there**' | notif post -a gierd -c general --dry-run
+notif read -c general -n 3 --raw      # the other direction, before conversion
 ```

@@ -17,7 +17,7 @@ default_account = "gierd"
 # An account key is the workspace short name: "gierd" => gierd.slack.com
 # ---------------------------------------------------------------------------
 [accounts.gierd]
-workspace = "gierd.slack.com"       # informational only
+workspace = "gierd.slack.com"       # also builds permalinks for `notif read`
 
 # Exactly one token source per account:
 token = "xoxb-000000000000-000000000000-REPLACE_ME"
