@@ -12,7 +12,7 @@ notif-tg post --account gierd --chat releases --template deploy \
 `gierd` is one bot; `releases` is whatever chat id that account's config maps it
 to. Multiple bots and any number of chats per bot are supported.
 
-Companion to [`notif`](../notif), which does the same for Slack.
+Companion to [`notif-slack`](../notif-slack), which does the same for Slack.
 
 ## Install
 
