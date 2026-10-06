@@ -62,6 +62,55 @@ pub fn to_mrkdwn(src: &str) -> String {
     vault.restore(&s)
 }
 
+/// Slack's `header` block takes plain text of at most this many characters.
+pub const MAX_HEADER_CHARS: usize = 150;
+/// A `section` block's text is capped here, far below a plain message's limit.
+pub const MAX_SECTION_CHARS: usize = 3000;
+
+/// A message that opens with a top-level `# Heading` as Block Kit blocks: the heading in a
+/// `header` block, which Slack sets in larger type, and the rest as one mrkdwn `section`.
+/// `None` when there is no leading `# ` or either part is too long for its block, so the
+/// caller posts plain text exactly as it always has.
+pub fn header_blocks(src: &str) -> Option<serde_json::Value> {
+    let heading = re!(r"^#[ \t]+(.*?)[ \t]*#*[ \t]*$");
+
+    let src = src.replace("\r\n", "\n");
+    let src = src.trim_start_matches(['\n', ' ', '\t']);
+    let (first, rest) = src.split_once('\n').unwrap_or((src, ""));
+    let title = plain_heading(&heading.captures(first)?[1]);
+    if title.is_empty() || title.chars().count() > MAX_HEADER_CHARS {
+        return None;
+    }
+
+    let mut blocks = vec![serde_json::json!({
+        "type": "header",
+        "text": { "type": "plain_text", "text": title, "emoji": true },
+    })];
+    let body = to_mrkdwn(rest);
+    let body = body.trim();
+    if !body.is_empty() {
+        if body.chars().count() > MAX_SECTION_CHARS {
+            return None;
+        }
+        blocks.push(serde_json::json!({
+            "type": "section",
+            "text": { "type": "mrkdwn", "text": body },
+        }));
+    }
+    Some(serde_json::Value::Array(blocks))
+}
+
+/// A header block shows its text literally, so Markdown emphasis around a word would print
+/// as asterisks; only paired markers are removed, leaving a lone `_` in a name alone.
+fn plain_heading(s: &str) -> String {
+    let s = re!(r"\*\*(.+?)\*\*").replace_all(s, "$1");
+    let s = re!(r"__(.+?)__").replace_all(&s, "$1");
+    let s = re!(r"\*([^*\s][^*]*?)\*").replace_all(&s, "$1");
+    let s = re!(r"\b_([^_\s][^_]*?)_\b").replace_all(&s, "$1");
+    let s = re!(r"`([^`]+)`").replace_all(&s, "$1");
+    s.trim().to_string()
+}
+
 /// Slack needs these three escaped everywhere; nothing else.
 fn escape(s: &str) -> String {
     let mut out = String::with_capacity(s.len());
@@ -715,5 +764,44 @@ mod tests {
     #[test]
     fn horizontal_rule() {
         assert_eq!(to_mrkdwn("a\n\n---\n\nb"), "a\n\n────────────────────\n\nb");
+    }
+
+    #[test]
+    fn a_leading_h1_becomes_a_header_block_and_the_rest_a_section() {
+        let b = header_blocks("# Weekly status update\n\n_Product flow · 2026-10-05_\n\n- **Built** 10").unwrap();
+        assert_eq!(b[0]["type"], "header");
+        assert_eq!(b[0]["text"]["type"], "plain_text");
+        assert_eq!(b[0]["text"]["text"], "Weekly status update");
+        assert_eq!(b[1]["type"], "section");
+        assert_eq!(b[1]["text"]["text"], "_Product flow · 2026-10-05_\n\n• *Built* 10");
+        assert_eq!(b.as_array().unwrap().len(), 2);
+    }
+
+    #[test]
+    fn only_a_top_level_heading_on_the_first_line_counts() {
+        assert!(header_blocks("## Smaller heading\nbody").is_none());
+        assert!(header_blocks("Intro line\n# Late heading").is_none());
+        assert!(header_blocks("#hashtag, not a heading").is_none());
+        assert!(header_blocks("\n\n# After blank lines\nbody").is_some());
+    }
+
+    #[test]
+    fn a_heading_alone_is_just_a_header_block() {
+        let b = header_blocks("# Just this\n\n").unwrap();
+        assert_eq!(b.as_array().unwrap().len(), 1);
+    }
+
+    #[test]
+    fn header_text_loses_paired_emphasis_but_keeps_lone_underscores() {
+        let b = header_blocks("# **Deploy** of `api` _today_ for snake_case_name").unwrap();
+        assert_eq!(b[0]["text"]["text"], "Deploy of api today for snake_case_name");
+    }
+
+    #[test]
+    fn too_long_for_a_block_falls_back_to_plain_text() {
+        let long_title = format!("# {}", "x".repeat(MAX_HEADER_CHARS + 1));
+        assert!(header_blocks(&long_title).is_none());
+        let long_body = format!("# Title\n{}", "y".repeat(MAX_SECTION_CHARS + 1));
+        assert!(header_blocks(&long_body).is_none());
     }
 }

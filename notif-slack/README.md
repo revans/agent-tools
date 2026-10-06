@@ -154,6 +154,11 @@ real broadcast, and `&`/`<`/`>` are escaped. Code spans and fenced blocks are
 passed through untouched, as are hand-written Slack entities like `<@U123>`.
 `--raw` skips conversion entirely.
 
+A message whose first line is a top-level `# Heading` is also sent as Block Kit: the
+heading in a `header` block, which Slack sets in larger type, and the rest in one
+`section`. The full text still goes along for notifications and for `read`. A heading
+over 150 characters, a body over 3,000, or `--raw` posts plain text as before.
+
 Reading runs the same mapping backwards: `*bold*` comes back as `**bold**`,
 `<url|text>` as `[text](url)`, `•` as `-`, and `<@U01ABCDEF>` as `@alice` (ids
 that cannot be resolved stay as they are). Code spans and blocks are untouched

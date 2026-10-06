@@ -26,6 +26,10 @@ pub struct Post {
     pub channel: String,
     pub text: String,
     pub mrkdwn: bool,
+    /// When present Slack renders these and keeps `text` for notifications and anything
+    /// that cannot show blocks, so `text` must still carry the whole message.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub blocks: Option<Value>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub thread_ts: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]

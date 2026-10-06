@@ -308,6 +308,7 @@ fn cmd_post(cfg_path: Option<&Path>, a: PostArgs, send: bool) -> Result<()> {
         channel: channel.id.clone(),
         text: text.clone(),
         mrkdwn: true,
+        blocks: (!a.raw).then(|| mrkdwn::header_blocks(&markdown)).flatten(),
         thread_ts,
         reply_broadcast: a.broadcast.then_some(true),
         unfurl_links: unfurl,
@@ -331,6 +332,7 @@ fn cmd_post(cfg_path: Option<&Path>, a: PostArgs, send: bool) -> Result<()> {
                     "thread_ts": post.thread_ts,
                     "template": tpl.as_ref().map(|t| t.name.clone()),
                     "text": text,
+                    "blocks": post.blocks,
                 }))?
             );
         } else {
