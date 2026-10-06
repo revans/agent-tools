@@ -1,4 +1,3 @@
-/target
 # never commit real credentials
 notif-tg.toml
 config.toml

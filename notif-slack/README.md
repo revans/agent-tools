@@ -16,7 +16,7 @@ are supported.
 ## Install
 
 ```bash
-cargo install --path .
+make -C .. install        # or: cargo install --path .
 notif-slack init          # writes ~/.config/notif-slack/config.toml (mode 0600) + templates
 ```
 
@@ -168,5 +168,5 @@ look up accounts and channels, pick a template, preview with `--dry-run`, report
 the permalink, read a channel and reply in thread. Install it with:
 
 ```bash
-ln -s "$PWD/skills/slack-post" ~/.claude/skills/slack-post
+make -C .. skills        # or: ln -s "$PWD/skills/slack-post" ~/.claude/skills/slack-post
 ```

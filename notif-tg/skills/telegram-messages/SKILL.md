@@ -17,7 +17,7 @@ bot, `--chat alerts` is whatever chat id that account's config maps `alerts` to.
 
 Check the tool is present: `notif-tg --version`.
 
-If it is missing: `cd /home/revans/Work/PersonalLab/notif-tg && cargo install --path . --locked`
+If it is missing: `cd /home/revans/Work/PersonalLab/notif && make install`
 
 If `notif-tg where` reports no config, the user has not set up a bot yet. Run
 `notif-tg init`, tell them to create a bot with @BotFather and paste the token

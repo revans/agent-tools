@@ -1,5 +1,4 @@
-/target
 # never commit real credentials
-notif.toml
+notif-slack.toml
 config.toml
 !examples/config.toml

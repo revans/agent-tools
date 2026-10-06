@@ -20,7 +20,7 @@ account's config maps `releases` to.
 Check the tool is present: `notif-slack --version`.
 
 If it is missing, build and install it from the project:
-`cd /home/revans/Work/PersonalLab/notif-slack && cargo install --path . --locked`
+`cd /home/revans/Work/PersonalLab/notif && make install`
 
 If `notif-slack where` reports no config, the user has not set up credentials yet. Run
 `notif-slack init`, tell them to put a bot token in the file it created, and stop —

@@ -17,7 +17,7 @@ Companion to [`notif-slack`](../notif-slack), which does the same for Slack.
 ## Install
 
 ```bash
-cargo install --path .
+make -C .. install        # or: cargo install --path .
 notif-tg init        # writes ~/.config/notif-tg/config.toml (0600) + templates
 ```
 
@@ -167,5 +167,5 @@ chat, pick a template, preview with `--dry-run`, send, read, and reply in a
 thread. Install it with:
 
 ```bash
-ln -s "$PWD/skills/telegram-messages" ~/.claude/skills/telegram-messages
+make -C .. skills        # or: ln -s "$PWD/skills/telegram-messages" ~/.claude/skills/telegram-messages
 ```
