@@ -1,0 +1,5 @@
+/target
+# never commit real credentials
+notif.toml
+config.toml
+!examples/config.toml

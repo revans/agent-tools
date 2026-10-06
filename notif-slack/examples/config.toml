@@ -1,0 +1,57 @@
+# notif-slack — Slack accounts, channels and credentials.
+#
+# Location (first match wins):
+#   --config <path>  |  $NOTIF_SLACK_CONFIG  |  ~/.config/notif-slack/config.toml  |  ./notif-slack.toml
+#
+# Keep this file at mode 0600 if you store tokens inline:  chmod 600 config.toml
+
+# Account used when --account is omitted.
+default_account = "gierd"
+
+# Where `--template <name>` looks for `<name>.md`.
+# Relative paths resolve against this file's directory. Default: ./templates
+# template_dir = "~/.config/notif-slack/templates"
+
+
+# ---------------------------------------------------------------------------
+# An account key is the workspace short name: "gierd" => gierd.slack.com
+# ---------------------------------------------------------------------------
+[accounts.gierd]
+workspace = "gierd.slack.com"       # also builds permalinks for `notif-slack read`
+
+# Exactly one token source per account:
+token = "xoxb-000000000000-000000000000-REPLACE_ME"
+# token_env = "GIERD_SLACK_TOKEN"            # read from the environment
+# token_command = "pass show slack/gierd"    # read from a secret manager
+
+default_channel = "general"
+
+# Optional sender overrides (require the chat:write.customize scope).
+# username = "notif-slack"
+# icon_emoji = ":bell:"
+
+# Friendly name -> channel id. Ids are stabler than names; `notif-slack discover gierd`
+# prints this table for you.
+[accounts.gierd.channels]
+general = "C0100000000"
+alerts = "C0100000001"
+
+# A channel may also be a table, to carry a description and its own sender look.
+[accounts.gierd.channels.releases]
+id = "C0100000002"
+description = "Deploy and release announcements"
+icon_emoji = ":rocket:"
+username = "release-bot"
+
+
+# ---------------------------------------------------------------------------
+# Second workspace: acme.slack.com
+# ---------------------------------------------------------------------------
+[accounts.acme]
+workspace = "acme.slack.com"
+token_env = "ACME_SLACK_TOKEN"
+default_channel = "standup"
+
+[accounts.acme.channels]
+standup = "C0200000000"
+incidents = "C0200000001"
