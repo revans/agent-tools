@@ -1,11 +1,11 @@
-# notif
+# notif-slack
 
 Post Markdown to Slack from the command line, read a channel back, and reply in
 thread. Accounts, channels and credentials live in one external TOML file, so
 you address a message by name:
 
 ```bash
-notif post --account gierd --channel releases --template deploy \
+notif-slack post --account gierd --channel releases --template deploy \
            --var service=api --var version=v2.3.1
 ```
 
@@ -17,18 +17,18 @@ are supported.
 
 ```bash
 cargo install --path .
-notif init          # writes ~/.config/notif/config.toml (mode 0600) + templates
+notif-slack init          # writes ~/.config/notif-slack/config.toml (mode 0600) + templates
 ```
 
 Then put a bot token in the config and check it:
 
 ```bash
-notif check
+notif-slack check
 ```
 
 ## Configuration
 
-`~/.config/notif/config.toml` (or `--config`, `$NOTIF_CONFIG`, `./notif.toml`):
+`~/.config/notif-slack/config.toml` (or `--config`, `$NOTIF_SLACK_CONFIG`, `./notif-slack.toml`):
 
 ```toml
 default_account = "gierd"
@@ -57,10 +57,10 @@ standup = "C0200000000"
 
 A token can be inline, read from an environment variable (`token_env`), or
 produced by a command (`token_command = "pass show slack/gierd"`). Tokens are
-never echoed — listings show `xoxb-…AB12` — and `notif` warns if a config
+never echoed — listings show `xoxb-…AB12` — and `notif-slack` warns if a config
 holding inline tokens is group- or world-readable.
 
-`notif discover gierd` asks Slack for every channel the token can see and
+`notif-slack discover gierd` asks Slack for every channel the token can see and
 prints a `[channels]` table ready to paste.
 
 The Slack app needs `chat:write` (plus `chat:write.customize` if you override
@@ -98,19 +98,19 @@ defaults that a command-line flag overrides.
 
 | Command | Does |
 | --- | --- |
-| `notif post` | render and send |
-| `notif render` | render to Slack mrkdwn on stdout, send nothing |
-| `notif read` | recent messages from a channel, newest last |
-| `notif thread` | one thread, parent message first |
-| `notif accounts` | list configured workspaces |
-| `notif channels [account]` | list that account's channels |
-| `notif templates` | list templates with their variables |
-| `notif check [account]` | verify tokens via `auth.test` |
-| `notif discover [account]` | channel ids from Slack, as TOML |
-| `notif init` | write a starter config and templates |
-| `notif where` | show the config and template paths in use |
+| `notif-slack post` | render and send |
+| `notif-slack render` | render to Slack mrkdwn on stdout, send nothing |
+| `notif-slack read` | recent messages from a channel, newest last |
+| `notif-slack thread` | one thread, parent message first |
+| `notif-slack accounts` | list configured workspaces |
+| `notif-slack channels [account]` | list that account's channels |
+| `notif-slack templates` | list templates with their variables |
+| `notif-slack check [account]` | verify tokens via `auth.test` |
+| `notif-slack discover [account]` | channel ids from Slack, as TOML |
+| `notif-slack init` | write a starter config and templates |
+| `notif-slack where` | show the config and template paths in use |
 
-Every listing command takes `--json`. `notif post --json` returns the message
+Every listing command takes `--json`. `notif-slack post --json` returns the message
 `ts`, `thread_ts` and permalink.
 
 Message sources, in place of `--template`: `--file <path>`, `--text <markdown>`,
@@ -121,10 +121,10 @@ or Markdown piped on stdin. Useful flags: `--dry-run`,
 ## Reading and replying
 
 ```bash
-notif read -a gierd -c alerts                     # 20 most recent, oldest first
-notif read -c alerts -n 50 --since 2025-01-13     # a ts or an ISO-8601 date/datetime
-notif read -c alerts --json                       # ts, iso_time, author, markdown, permalink
-notif thread -c alerts 1718031234.567890          # one thread, parent first
+notif-slack read -a gierd -c alerts                     # 20 most recent, oldest first
+notif-slack read -c alerts -n 50 --since 2025-01-13     # a ts or an ISO-8601 date/datetime
+notif-slack read -c alerts --json                       # ts, iso_time, author, markdown, permalink
+notif-slack thread -c alerts 1718031234.567890          # one thread, parent first
 ```
 
 A read prints each message's author, local time, `ts`, reply count and text
@@ -135,8 +135,8 @@ Replying needs only something the user can see — a `ts` from a read, or a
 permalink, which also says which channel it is in:
 
 ```bash
-notif post -c alerts --reply-to 1718031234.567890 --text 'On it'
-notif post --reply-to 'https://gierd.slack.com/archives/C0100000001/p1718031234567890' \
+notif-slack post -c alerts --reply-to 1718031234.567890 --text 'On it'
+notif-slack post --reply-to 'https://gierd.slack.com/archives/C0100000001/p1718031234567890' \
            --text 'On it'
 ```
 
@@ -147,7 +147,7 @@ permalink.
 
 ## Markdown handling
 
-Slack does not render Markdown, so `notif` converts it: headings become bold,
+Slack does not render Markdown, so `notif-slack` converts it: headings become bold,
 `**bold**` becomes `*bold*`, links become `<url|text>`, bullets become `•`,
 task lists become `☑`/`☐`, tables become aligned code blocks, `@here` becomes a
 real broadcast, and `&`/`<`/`>` are escaped. Code spans and fenced blocks are

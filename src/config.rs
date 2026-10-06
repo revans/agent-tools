@@ -26,7 +26,7 @@ pub struct Config {
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Account {
-    /// e.g. "gierd.slack.com". Informational for posting; `notif read` builds each
+    /// e.g. "gierd.slack.com". Informational for posting; `notif-slack read` builds each
     /// message's permalink from it.
     #[serde(default)]
     pub workspace: Option<String>,
@@ -106,8 +106,8 @@ pub struct ResolvedChannel {
 }
 
 impl Config {
-    /// Resolution order: `--config`, `$NOTIF_CONFIG`, `$XDG_CONFIG_HOME/notif/config.toml`,
-    /// `~/.config/notif/config.toml`, then `./notif.toml`.
+    /// Resolution order: `--config`, `$NOTIF_SLACK_CONFIG`, `$XDG_CONFIG_HOME/notif-slack/config.toml`,
+    /// `~/.config/notif-slack/config.toml`, then `./notif-slack.toml`.
     pub fn locate(explicit: Option<&Path>) -> Result<PathBuf> {
         if let Some(p) = explicit {
             if !p.exists() {
@@ -115,22 +115,25 @@ impl Config {
             }
             return Ok(p.to_path_buf());
         }
-        if let Ok(p) = std::env::var("NOTIF_CONFIG") {
+        if let Ok(p) = std::env::var("NOTIF_SLACK_CONFIG") {
             let p = PathBuf::from(expand_tilde(&p));
             if !p.exists() {
-                bail!("NOTIF_CONFIG points at a missing file: {}", p.display());
+                bail!(
+                    "NOTIF_SLACK_CONFIG points at a missing file: {}",
+                    p.display()
+                );
             }
             return Ok(p);
         }
         let mut candidates = vec![default_config_path()];
-        candidates.push(PathBuf::from("notif.toml"));
+        candidates.push(PathBuf::from("notif-slack.toml"));
         for c in &candidates {
             if c.exists() {
                 return Ok(c.clone());
             }
         }
         Err(anyhow!(
-            "no config file found (looked at {}). Run `notif init` to create one.",
+            "no config file found (looked at {}). Run `notif-slack init` to create one.",
             candidates
                 .iter()
                 .map(|c| c.display().to_string())
@@ -328,12 +331,12 @@ pub fn default_config_path() -> PathBuf {
     if let Ok(x) = std::env::var("XDG_CONFIG_HOME")
         && !x.is_empty()
     {
-        return PathBuf::from(x).join("notif").join("config.toml");
+        return PathBuf::from(x).join("notif-slack").join("config.toml");
     }
     dirs::home_dir()
         .unwrap_or_else(|| PathBuf::from("."))
         .join(".config")
-        .join("notif")
+        .join("notif-slack")
         .join("config.toml")
 }
 

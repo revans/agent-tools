@@ -1,7 +1,7 @@
-# notif — Slack accounts, channels and credentials.
+# notif-slack — Slack accounts, channels and credentials.
 #
 # Location (first match wins):
-#   --config <path>  |  $NOTIF_CONFIG  |  ~/.config/notif/config.toml  |  ./notif.toml
+#   --config <path>  |  $NOTIF_SLACK_CONFIG  |  ~/.config/notif-slack/config.toml  |  ./notif-slack.toml
 #
 # Keep this file at mode 0600 if you store tokens inline:  chmod 600 config.toml
 
@@ -10,14 +10,14 @@ default_account = "gierd"
 
 # Where `--template <name>` looks for `<name>.md`.
 # Relative paths resolve against this file's directory. Default: ./templates
-# template_dir = "~/.config/notif/templates"
+# template_dir = "~/.config/notif-slack/templates"
 
 
 # ---------------------------------------------------------------------------
 # An account key is the workspace short name: "gierd" => gierd.slack.com
 # ---------------------------------------------------------------------------
 [accounts.gierd]
-workspace = "gierd.slack.com"       # also builds permalinks for `notif read`
+workspace = "gierd.slack.com"       # also builds permalinks for `notif-slack read`
 
 # Exactly one token source per account:
 token = "xoxb-000000000000-000000000000-REPLACE_ME"
@@ -27,10 +27,10 @@ token = "xoxb-000000000000-000000000000-REPLACE_ME"
 default_channel = "general"
 
 # Optional sender overrides (require the chat:write.customize scope).
-# username = "notif"
+# username = "notif-slack"
 # icon_emoji = ":bell:"
 
-# Friendly name -> channel id. Ids are stabler than names; `notif discover gierd`
+# Friendly name -> channel id. Ids are stabler than names; `notif-slack discover gierd`
 # prints this table for you.
 [accounts.gierd.channels]
 general = "C0100000000"

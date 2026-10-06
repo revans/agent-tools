@@ -1,12 +1,12 @@
 ---
 name: slack-post
-description: Post Markdown messages to Slack, read a channel or thread, and reply in thread with the `notif` CLI. Use whenever the user wants something sent, posted, announced, or shared to Slack — a channel, a workspace, a deploy/release note, an incident update, a standup, a status report, a summary of work just finished, or "tell the team". Also use to read, catch up on or summarise what was said in a Slack channel or thread, to reply to a message in its thread, to list configured Slack accounts/channels/templates, to check Slack credentials, or to create and edit `notif` Markdown templates.
+description: Post Markdown messages to Slack, read a channel or thread, and reply in thread with the `notif-slack` CLI. Use whenever the user wants something sent, posted, announced, or shared to Slack — a channel, a workspace, a deploy/release note, an incident update, a standup, a status report, a summary of work just finished, or "tell the team". Also use to read, catch up on or summarise what was said in a Slack channel or thread, to reply to a message in its thread, to list configured Slack accounts/channels/templates, to check Slack credentials, or to create and edit `notif-slack` Markdown templates.
 allowed-tools: Bash, Read, Write, Edit, Glob
 ---
 
-# Posting to and reading Slack with `notif`
+# Posting to and reading Slack with `notif-slack`
 
-`notif` is a Rust CLI that renders a Markdown template and posts it to a named
+`notif-slack` is a Rust CLI that renders a Markdown template and posts it to a named
 Slack workspace and channel, and reads messages back out of one. Accounts,
 channels and credentials live in one external TOML file; nothing is hard-coded
 and no token is ever passed on the command line.
@@ -17,13 +17,13 @@ account's config maps `releases` to.
 
 ## Before the first call
 
-Check the tool is present: `notif --version`.
+Check the tool is present: `notif-slack --version`.
 
 If it is missing, build and install it from the project:
-`cd /home/revans/Work/PersonalLab/notif && cargo install --path . --locked`
+`cd /home/revans/Work/PersonalLab/notif-slack && cargo install --path . --locked`
 
-If `notif where` reports no config, the user has not set up credentials yet. Run
-`notif init`, tell them to put a bot token in the file it created, and stop —
+If `notif-slack where` reports no config, the user has not set up credentials yet. Run
+`notif-slack init`, tell them to put a bot token in the file it created, and stop —
 you cannot invent a token.
 
 ## Workflow
@@ -31,28 +31,28 @@ you cannot invent a token.
 1. **Find the destination.** Never guess an account or channel name.
 
    ```bash
-   notif accounts --json            # accounts, their workspaces, default channel
-   notif channels <account> --json  # channel keys -> ids for one account
+   notif-slack accounts --json            # accounts, their workspaces, default channel
+   notif-slack channels <account> --json  # channel keys -> ids for one account
    ```
 
    If the user named a channel that is not in the list, say so and show the
-   available ones. Only use `notif discover <account>` (which asks Slack for
+   available ones. Only use `notif-slack discover <account>` (which asks Slack for
    every visible channel) when the user wants to add a channel to the config.
 
 2. **Pick or write the message.**
 
    ```bash
-   notif templates --json   # name, description, required vars, destination
+   notif-slack templates --json   # name, description, required vars, destination
    ```
 
    Use an existing template when one fits — it carries the house style and the
    right default channel. Pass values with repeated `--var key=value`:
 
    ```bash
-   notif post -t deploy -v service=api -v version=v2.3.1 -v env=staging
+   notif-slack post -t deploy -v service=api -v version=v2.3.1 -v env=staging
    ```
 
-   `notif templates --json` lists each template's `declared_vars` with
+   `notif-slack templates --json` lists each template's `declared_vars` with
    `required` and `default`. Supply every required one; a missing value is an
    error, not a silent blank.
 
@@ -61,9 +61,9 @@ you cannot invent a token.
    is where this goes wrong):
 
    ```bash
-   notif post -a gierd -c alerts --text '**Build 412 failed** — see [logs](https://ci/412)'
+   notif-slack post -a gierd -c alerts --text '**Build 412 failed** — see [logs](https://ci/412)'
 
-   notif post -a gierd -c general <<'MSG'
+   notif-slack post -a gierd -c general <<'MSG'
    ## Weekly summary
 
    - Shipped the new importer
@@ -75,7 +75,7 @@ you cannot invent a token.
    renders exactly what would be sent and posts nothing:
 
    ```bash
-   notif post -t incident -v title="Checkout 500s" -v summary="..." --dry-run
+   notif-slack post -t incident -v title="Checkout 500s" -v summary="..." --dry-run
    ```
 
    Show the user that output and get a yes before posting. Post straight away
@@ -83,7 +83,7 @@ you cannot invent a token.
    #alerts on gierd" is a go; "let the team know when you're done" is a
    dry-run first.
 
-4. **Post, then report the link.** `notif post … --json` returns
+4. **Post, then report the link.** `notif-slack post … --json` returns
    `{"ok":true,"channel":…,"ts":…,"permalink":…}`. Give the user the permalink.
    Keep the `ts` if you may need to reply in-thread: `--reply-to <ts>`.
 
@@ -92,14 +92,14 @@ seems to hang, check Slack before retrying rather than sending a duplicate.
 
 ## Reading a channel
 
-`notif read` fetches recent messages. Addressing is exactly the same as posting
+`notif-slack read` fetches recent messages. Addressing is exactly the same as posting
 — same account keys, same channel keys, same default channel:
 
 ```bash
-notif read -a gierd -c alerts            # 20 most recent, oldest at the top
-notif read -c alerts -n 50               # more of them
-notif read -c alerts --since 2025-01-13  # since a date, or an ISO datetime, or a ts
-notif read -c alerts --since 2025-01-13T09:00:00Z --until 2025-01-13T17:00:00Z
+notif-slack read -a gierd -c alerts            # 20 most recent, oldest at the top
+notif-slack read -c alerts -n 50               # more of them
+notif-slack read -c alerts --since 2025-01-13  # since a date, or an ISO datetime, or a ts
+notif-slack read -c alerts --since 2025-01-13T09:00:00Z --until 2025-01-13T17:00:00Z
 ```
 
 Each message prints the author, the local time, its `ts`, the text converted
@@ -130,15 +130,15 @@ words. Do not paste the whole transcript back at the user.
 The useful loop is **read → pick a `ts` → `--reply-to`**:
 
 ```bash
-notif read -c alerts --json                      # find the message, copy its "ts"
-notif post -c alerts --reply-to 1718031234.567890 --text 'Looking at it now'
+notif-slack read -c alerts --json                      # find the message, copy its "ts"
+notif-slack post -c alerts --reply-to 1718031234.567890 --text 'Looking at it now'
 ```
 
 A Slack permalink works in place of the `ts`, and carries the channel with it,
 so a message the user pasted needs nothing else:
 
 ```bash
-notif post --reply-to 'https://gierd.slack.com/archives/C0100000001/p1718031234567890' \
+notif-slack post --reply-to 'https://gierd.slack.com/archives/C0100000001/p1718031234567890' \
            --text 'On it — deploying the fix.'
 ```
 
@@ -154,15 +154,15 @@ notif post --reply-to 'https://gierd.slack.com/archives/C0100000001/p17180312345
 To read one thread, with the parent message first:
 
 ```bash
-notif thread -c alerts 1718031234.567890
-notif thread 'https://gierd.slack.com/archives/C0100000001/p1718031234567890' --json
+notif-slack thread -c alerts 1718031234.567890
+notif-slack thread 'https://gierd.slack.com/archives/C0100000001/p1718031234567890' --json
 ```
 
 A permalink to any reply in a thread resolves to the whole thread.
 
 ## Writing the Markdown
 
-Write normal Markdown — `notif` translates it to Slack's `mrkdwn` (headings
+Write normal Markdown — `notif-slack` translates it to Slack's `mrkdwn` (headings
 become bold, `**bold**` becomes `*bold*`, links become `<url|text>`, tables
 become aligned code blocks, `@here` becomes a real broadcast). See
 `references/mrkdwn.md` for the full mapping and the handful of things that do
@@ -175,7 +175,7 @@ close with a sign-off unless the user asked for one.
 ## Creating a template
 
 When the user will send the same shape of message again, write a template
-instead of a one-off. Put it in the directory `notif where` reports:
+instead of a one-off. Put it in the directory `notif-slack where` reports:
 
 ```markdown
 ---
@@ -196,11 +196,11 @@ env = { description = "Target environment", default = "production" }
 Frontmatter is TOML between `---` fences and is optional. `account` and
 `channel` there become the defaults for that template; a `--var` on the command
 line always wins. A var with no `default` is required. Verify a new template
-with `notif render -t <name> -v …` before posting with it.
+with `notif-slack render -t <name> -v …` before posting with it.
 
 ## When a command fails
 
-`notif` prints the reason and a hint, and exits non-zero. The common ones:
+`notif-slack` prints the reason and a hint, and exits non-zero. The common ones:
 
 | Message | What to do |
 | --- | --- |
@@ -212,5 +212,5 @@ with `notif render -t <name> -v …` before posting with it.
 | `missing_scope` | The named scope must be added to the Slack app and the app reinstalled. |
 
 Config layout, token sources, scopes and multi-workspace setup are in
-`references/config.md`. Full flag lists: `notif post --help`,
-`notif read --help`, `notif thread --help`.
+`references/config.md`. Full flag lists: `notif-slack post --help`,
+`notif-slack read --help`, `notif-slack thread --help`.

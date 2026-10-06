@@ -195,7 +195,7 @@ impl Template {
         for k in vars.keys() {
             if !declared.contains_key(k) && !referenced.contains(k) {
                 eprintln!(
-                    "notif: warning: --var {k} is not used by template \"{}\"",
+                    "notif-slack: warning: --var {k} is not used by template \"{}\"",
                     self.name
                 );
             }
@@ -230,7 +230,7 @@ pub fn list(dir: &Path) -> Result<Vec<Template>> {
     for p in entries {
         match Template::from_file(&p) {
             Ok(t) => out.push(t),
-            Err(e) => eprintln!("notif: warning: skipping {}: {e:#}", p.display()),
+            Err(e) => eprintln!("notif-slack: warning: skipping {}: {e:#}", p.display()),
         }
     }
     Ok(out)

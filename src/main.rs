@@ -1,4 +1,4 @@
-//! notif — post Markdown templates to any configured Slack workspace and channel.
+//! notif-slack — post Markdown templates to any configured Slack workspace and channel.
 
 mod config;
 mod mrkdwn;
@@ -20,14 +20,14 @@ const MAX_MESSAGE_CHARS: usize = 40_000;
 
 #[derive(Parser, Debug)]
 #[command(
-    name = "notif",
+    name = "notif-slack",
     version,
     about = "Post Markdown templates to Slack",
     long_about = "Post Markdown templates to any Slack workspace and channel listed in an \
-                  external TOML config (default: ~/.config/notif/config.toml)."
+                  external TOML config (default: ~/.config/notif-slack/config.toml)."
 )]
 struct Cli {
-    /// Config file to use (else $NOTIF_CONFIG, then ~/.config/notif/config.toml, then ./notif.toml).
+    /// Config file to use (else $NOTIF_SLACK_CONFIG, then ~/.config/notif-slack/config.toml, then ./notif-slack.toml).
     #[arg(long, short = 'C', global = true, value_name = "PATH")]
     config: Option<PathBuf>,
 
@@ -200,7 +200,7 @@ struct ThreadArgs {
 
 fn main() {
     if let Err(e) = run() {
-        eprintln!("notif: {e:#}");
+        eprintln!("notif-slack: {e:#}");
         std::process::exit(1);
     }
 }
@@ -338,7 +338,7 @@ fn cmd_post(cfg_path: Option<&Path>, a: PostArgs, send: bool) -> Result<()> {
             if send {
                 writeln!(
                     out,
-                    "notif: dry run — would post to {account_key}/{} ({})\n",
+                    "notif-slack: dry run — would post to {account_key}/{} ({})\n",
                     channel.key, channel.id
                 )?;
             }
@@ -358,7 +358,7 @@ fn cmd_post(cfg_path: Option<&Path>, a: PostArgs, send: bool) -> Result<()> {
         match client.thread_parent(&channel.id, &r.ts) {
             Ok(parent) => post.thread_ts = Some(parent),
             Err(e) => eprintln!(
-                "notif: warning: could not check whether {} is already a reply ({e:#}); \
+                "notif-slack: warning: could not check whether {} is already a reply ({e:#}); \
                  replying to it directly",
                 r.ts
             ),
@@ -383,7 +383,7 @@ fn cmd_post(cfg_path: Option<&Path>, a: PostArgs, send: bool) -> Result<()> {
             }))?
         );
     } else {
-        print!("notif: posted to {account_key}/{}", channel.key);
+        print!("notif-slack: posted to {account_key}/{}", channel.key);
         match &posted.permalink {
             Some(l) => println!(" — {l}"),
             None => println!(" (ts {})", posted.ts),
@@ -701,7 +701,7 @@ fn write_messages(view: &View, rows: &[Rendered], out: &mut impl Write) -> Resul
         if m.reply_count > 0 && view.thread.is_none() {
             writeln!(
                 out,
-                "{indent}  {dim}↳ {} repl{} · notif thread -a {} -c {} {}{reset}",
+                "{indent}  {dim}↳ {} repl{} · notif-slack thread -a {} -c {} {}{reset}",
                 m.reply_count,
                 if m.reply_count == 1 { "y" } else { "ies" },
                 view.account,
@@ -832,7 +832,7 @@ fn cmd_channels(cfg_path: Option<&Path>, account: Option<&str>, json: bool) -> R
         return Ok(());
     }
     if acc.channels.is_empty() {
-        println!("account {name} has no channels configured (try `notif discover {name}`)");
+        println!("account {name} has no channels configured (try `notif-slack discover {name}`)");
         return Ok(());
     }
     let width = acc.channels.keys().map(String::len).max().unwrap_or(0);
@@ -1059,9 +1059,9 @@ fn cmd_init(cfg_path: Option<&Path>, force: bool) -> Result<()> {
         }
     }
 
-    println!("notif: wrote {}", path.display());
-    println!("notif: templates live in {}", tpl_dir.display());
-    println!("notif: edit the config, then run `notif check`");
+    println!("notif-slack: wrote {}", path.display());
+    println!("notif-slack: templates live in {}", tpl_dir.display());
+    println!("notif-slack: edit the config, then run `notif-slack check`");
     Ok(())
 }
 
@@ -1098,7 +1098,7 @@ fn warn_on_loose_permissions(cfg: &Config) {
             let mode = md.permissions().mode() & 0o077;
             if mode != 0 {
                 eprintln!(
-                    "notif: warning: {} holds inline tokens and is group/world accessible; run: chmod 600 {}",
+                    "notif-slack: warning: {} holds inline tokens and is group/world accessible; run: chmod 600 {}",
                     cfg.path.display(),
                     cfg.path.display()
                 );
@@ -1111,7 +1111,7 @@ fn warn_on_loose_permissions(cfg: &Config) {
 
 const EXAMPLE_CONFIG: &str = include_str!("../examples/config.toml");
 
-/// Shipped with the binary so `notif init` produces something usable immediately.
+/// Shipped with the binary so `notif-slack init` produces something usable immediately.
 const EXAMPLE_TEMPLATES: &[(&str, &str)] = &[
     ("deploy.md", include_str!("../examples/templates/deploy.md")),
     (
@@ -1196,7 +1196,7 @@ mod tests {
         assert!(out.contains("\n  Deployed **api** v2.3.1\n"), "{out}");
         assert!(out.contains("\n  - one\n  - two\n"), "{out}");
         assert!(
-            out.contains("↳ 3 replies · notif thread -a gierd -c alerts 1718031234.567890"),
+            out.contains("↳ 3 replies · notif-slack thread -a gierd -c alerts 1718031234.567890"),
             "{out}"
         );
     }

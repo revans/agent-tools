@@ -96,7 +96,7 @@ pub struct MessageRef {
 impl Slack {
     pub fn new(token: String) -> Result<Slack> {
         let http = reqwest::blocking::Client::builder()
-            .user_agent(concat!("notif/", env!("CARGO_PKG_VERSION")))
+            .user_agent(concat!("notif-slack/", env!("CARGO_PKG_VERSION")))
             .timeout(Duration::from_secs(30))
             .connect_timeout(Duration::from_secs(10))
             .https_only(true)
@@ -453,7 +453,7 @@ fn next_cursor(v: &Value) -> String {
         .to_string()
 }
 
-/// Parses `--reply-to` / `notif thread`: a permalink, a `ts`, or a permalink's `p…` form.
+/// Parses `--reply-to` / `notif-slack thread`: a permalink, a `ts`, or a permalink's `p…` form.
 ///
 /// `https://gierd.slack.com/archives/C0100000000/p1718031234567890` names both the
 /// channel and the message; `p1718031234567890` is `1718031234.567890` with the dot
@@ -601,7 +601,7 @@ fn hint(code: &str) -> Option<&'static str> {
         }
         "missing_scope" => "add the listed scope to the Slack app and reinstall it",
         "channel_not_found" => {
-            "the channel id is wrong, or this token's workspace cannot see it — try `notif discover <account>`"
+            "the channel id is wrong, or this token's workspace cannot see it — try `notif-slack discover <account>`"
         }
         "not_in_channel" => {
             "invite the bot to the channel first: /invite @your-app in that channel"
@@ -611,7 +611,7 @@ fn hint(code: &str) -> Option<&'static str> {
             "no thread with that ts — check the ts and that it is in this channel"
         }
         "message_not_found" => {
-            "no message with that ts in this channel — `notif read` prints the ts of each message"
+            "no message with that ts in this channel — `notif-slack read` prints the ts of each message"
         }
         "invalid_ts_oldest" | "invalid_ts_latest" | "invalid_ts_ending" => {
             "--since/--until want a Slack ts (1718031234.567890) or an ISO-8601 date"

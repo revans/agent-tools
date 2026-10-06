@@ -1,6 +1,6 @@
-# What `notif` does to your Markdown
+# What `notif-slack` does to your Markdown
 
-Slack does not render Markdown. `notif` rewrites the common subset into Slack's
+Slack does not render Markdown. `notif-slack` rewrites the common subset into Slack's
 `mrkdwn` before posting, so write ordinary Markdown and expect this:
 
 | You write | Slack shows |
@@ -37,15 +37,15 @@ Notes:
   ask the user for it rather than guessing.
 - **`--raw` skips all of this** and sends the text byte-for-byte. Use it only
   when you have already written Slack `mrkdwn` or a pre-escaped payload.
-- **Slack caps a message at 40,000 characters** and `notif` refuses longer ones.
+- **Slack caps a message at 40,000 characters** and `notif-slack` refuses longer ones.
   Split the message or link out instead.
 
 ## Reading: `mrkdwn` back to Markdown
 
-`notif read` and `notif thread` run the mapping the other way before printing a
+`notif-slack read` and `notif-slack thread` run the mapping the other way before printing a
 message, so what you see is Markdown again:
 
-| Slack stores | `notif` shows |
+| Slack stores | `notif-slack` shows |
 | --- | --- |
 | `*bold*` | `**bold**` |
 | `_italic_` | `_italic_` |
@@ -74,7 +74,7 @@ Notes:
 Check any of this without posting:
 
 ```bash
-notif render -t deploy -v service=api -v version=v1
-echo '## Hi **there**' | notif post -a gierd -c general --dry-run
-notif read -c general -n 3 --raw      # the other direction, before conversion
+notif-slack render -t deploy -v service=api -v version=v1
+echo '## Hi **there**' | notif-slack post -a gierd -c general --dry-run
+notif-slack read -c general -n 3 --raw      # the other direction, before conversion
 ```

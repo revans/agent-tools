@@ -1,23 +1,23 @@
-# `notif` configuration
+# `notif-slack` configuration
 
 One TOML file holds every workspace, every channel and every credential.
-`notif where` prints the path in use. Resolution order:
+`notif-slack where` prints the path in use. Resolution order:
 
 1. `--config <path>`
-2. `$NOTIF_CONFIG`
-3. `$XDG_CONFIG_HOME/notif/config.toml`, else `~/.config/notif/config.toml`
-4. `./notif.toml`
+2. `$NOTIF_SLACK_CONFIG`
+3. `$XDG_CONFIG_HOME/notif-slack/config.toml`, else `~/.config/notif-slack/config.toml`
+4. `./notif-slack.toml`
 
-`notif init` writes a commented starter file with mode `0600`.
+`notif-slack init` writes a commented starter file with mode `0600`.
 
 ## Shape
 
 ```toml
 default_account = "gierd"
-# template_dir = "~/.config/notif/templates"   # default: <config dir>/templates
+# template_dir = "~/.config/notif-slack/templates"   # default: <config dir>/templates
 
 [accounts.gierd]                 # the key is how you address it: --account gierd
-workspace = "gierd.slack.com"    # also builds permalinks for `notif read`
+workspace = "gierd.slack.com"    # also builds permalinks for `notif-slack read`
 token = "xoxb-…"                 # exactly one token source, see below
 default_channel = "general"
 
@@ -52,8 +52,8 @@ Exactly one per account:
 | `token_env` | name of an environment variable holding the token |
 | `token_command` | a shell command that prints the token, e.g. `pass show slack/gierd` |
 
-`notif` warns when a config with inline tokens is group- or world-readable, and
-never prints a token: `notif accounts` shows `xoxb-…AB12`.
+`notif-slack` warns when a config with inline tokens is group- or world-readable, and
+never prints a token: `notif-slack accounts` shows `xoxb-…AB12`.
 
 ## Slack app setup
 
@@ -62,8 +62,8 @@ workspace. Scopes:
 
 - `chat:write` — required, to post.
 - `chat:write.customize` — only if you set `username` / `icon_emoji`.
-- `channels:read` (plus `groups:read` for private) — only for `notif discover`.
-- `channels:history` — for `notif read` and `notif thread`, and for `--reply-to`
+- `channels:read` (plus `groups:read` for private) — only for `notif-slack discover`.
+- `channels:history` — for `notif-slack read` and `notif-slack thread`, and for `--reply-to`
   to tell whether the message it was given is itself a reply.
 - `groups:history` — the same, for private channels (`im:history` /
   `mpim:history` for DMs and group DMs).
@@ -80,13 +80,13 @@ does not pick up new scopes.
 ## Filling in channel ids
 
 ```bash
-notif discover gierd              # prints a ready-to-paste [channels] table
-notif discover gierd --private --member-only
-notif check                       # auth.test every account
+notif-slack discover gierd              # prints a ready-to-paste [channels] table
+notif-slack discover gierd --private --member-only
+notif-slack check                       # auth.test every account
 ```
 
 Ids are stabler than names — a renamed channel keeps its id — which is why the
 config maps your own short name onto an id.
 
-`workspace = "gierd.slack.com"` is informational for posting, but `notif read`
+`workspace = "gierd.slack.com"` is informational for posting, but `notif-slack read`
 uses it to build each message's permalink locally, so it is worth setting.
