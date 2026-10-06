@@ -66,11 +66,13 @@ pub fn to_mrkdwn(src: &str) -> String {
 pub const MAX_HEADER_CHARS: usize = 150;
 /// A `section` block's text is capped here, far below a plain message's limit.
 pub const MAX_SECTION_CHARS: usize = 3000;
+/// Slack rejects a message carrying more blocks than this.
+pub const MAX_BLOCKS: usize = 50;
 
 /// A message that opens with a top-level `# Heading` as Block Kit blocks: the heading in a
-/// `header` block, which Slack sets in larger type, and the rest as one mrkdwn `section`.
-/// `None` when there is no leading `# ` or either part is too long for its block, so the
-/// caller posts plain text exactly as it always has.
+/// `header` block, which Slack sets in larger type, each horizontal rule as a `divider`, and
+/// the text between them as mrkdwn `section`s. `None` when there is no leading `# ` or any
+/// part is too long for its block, so the caller posts plain text exactly as it always has.
 pub fn header_blocks(src: &str) -> Option<serde_json::Value> {
     let heading = re!(r"^#[ \t]+(.*?)[ \t]*#*[ \t]*$");
 
@@ -86,9 +88,15 @@ pub fn header_blocks(src: &str) -> Option<serde_json::Value> {
         "type": "header",
         "text": { "type": "plain_text", "text": title, "emoji": true },
     })];
-    let body = to_mrkdwn(rest);
-    let body = body.trim();
-    if !body.is_empty() {
+    for (i, part) in split_on_rules(rest).iter().enumerate() {
+        if i > 0 {
+            blocks.push(serde_json::json!({ "type": "divider" }));
+        }
+        let body = to_mrkdwn(part);
+        let body = body.trim();
+        if body.is_empty() {
+            continue;
+        }
         if body.chars().count() > MAX_SECTION_CHARS {
             return None;
         }
@@ -97,7 +105,30 @@ pub fn header_blocks(src: &str) -> Option<serde_json::Value> {
             "text": { "type": "mrkdwn", "text": body },
         }));
     }
+    if blocks.len() > MAX_BLOCKS {
+        return None;
+    }
     Some(serde_json::Value::Array(blocks))
+}
+
+/// Markdown split at each horizontal rule, ignoring `---` inside a fenced code block.
+fn split_on_rules(src: &str) -> Vec<String> {
+    let mut parts = vec![String::new()];
+    let mut fenced = false;
+    for line in src.split('\n') {
+        let t = line.trim_start();
+        if t.starts_with("```") || t.starts_with("~~~") {
+            fenced = !fenced;
+        }
+        if !fenced && is_horizontal_rule(line) {
+            parts.push(String::new());
+            continue;
+        }
+        let last = parts.last_mut().expect("parts starts non-empty");
+        last.push_str(line);
+        last.push('\n');
+    }
+    parts
 }
 
 /// A header block shows its text literally, so Markdown emphasis around a word would print
@@ -803,5 +834,21 @@ mod tests {
         assert!(header_blocks(&long_title).is_none());
         let long_body = format!("# Title\n{}", "y".repeat(MAX_SECTION_CHARS + 1));
         assert!(header_blocks(&long_body).is_none());
+    }
+
+    #[test]
+    fn horizontal_rules_become_dividers_between_sections() {
+        let b = header_blocks("# Title\n**2026-10-05**\n\n---\n\nBody\n\n---\nFooter").unwrap();
+        let kinds: Vec<&str> = b.as_array().unwrap().iter().map(|x| x["type"].as_str().unwrap()).collect();
+        assert_eq!(kinds, ["header", "section", "divider", "section", "divider", "section"]);
+        assert_eq!(b[1]["text"]["text"], "*2026-10-05*");
+        assert_eq!(b[5]["text"]["text"], "Footer");
+    }
+
+    #[test]
+    fn a_rule_inside_a_code_fence_is_not_a_divider() {
+        let b = header_blocks("# Title\n```\n---\n```").unwrap();
+        assert_eq!(b.as_array().unwrap().len(), 2);
+        assert!(b[1]["text"]["text"].as_str().unwrap().contains("---"));
     }
 }
