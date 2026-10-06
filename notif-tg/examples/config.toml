@@ -1,0 +1,56 @@
+# notif-tg — Telegram bots, chats and credentials.
+#
+# Location (first match wins):
+#   --config <path> | $NOTIF_TG_CONFIG | ~/.config/notif-tg/config.toml | ./notif-tg.toml
+#
+# Keep this file at mode 0600 if you store tokens inline:  chmod 600 config.toml
+
+default_account = "gierd"
+
+# Where `--template <name>` looks for `<name>.md`.
+# Relative paths resolve against this file's directory. Default: ./templates
+# template_dir = "~/.config/notif-tg/templates"
+
+# Where `read` and `watch` remember how far they have consumed.
+# Default: $XDG_STATE_HOME/notif-tg, else ~/.local/state/notif-tg
+# state_dir = "~/.local/state/notif-tg"
+
+
+# ---------------------------------------------------------------------------
+# An account is one bot. Create it with @BotFather, which hands you the token.
+# ---------------------------------------------------------------------------
+[accounts.gierd]
+bot = "@gierd_notify_bot"        # informational only
+
+# Exactly one token source per account:
+token = "123456789:REPLACE_ME_WITH_THE_BOTFATHER_TOKEN"
+# token_env = "GIERD_TELEGRAM_TOKEN"            # read from the environment
+# token_command = "pass show telegram/gierd"    # read from a secret manager
+
+default_chat = "me"
+
+# Friendly name -> chat id. Ids are negative for groups and channels.
+# A bot cannot list its own chats, so run `notif-tg discover gierd` after
+# messaging the bot and paste what it prints.
+[accounts.gierd.chats]
+me = "123456789"
+alerts = "-1001234567890"
+
+# A chat may also be a table, to carry a description and its own defaults.
+[accounts.gierd.chats.releases]
+id = "-1009876543210"
+description = "Deploy and release announcements"
+no_preview = true
+# topic_id = 42                  # forum topic, for supergroups with topics on
+
+
+# ---------------------------------------------------------------------------
+# A second bot
+# ---------------------------------------------------------------------------
+[accounts.acme]
+bot = "@acme_ops_bot"
+token_env = "ACME_TELEGRAM_TOKEN"
+default_chat = "oncall"
+
+[accounts.acme.chats]
+oncall = "-1002222222222"
