@@ -20,6 +20,7 @@ It is a self-contained Go module in the `agent-tools` repo. It is run *against* 
    username = "your-username"
    password = "your-password"
    remote_base_path = "/home/your-username/public_html"
+   base_url = "https://example.com"   # optional; used by `wharf verify`
    ```
 
    `remote_base_path` is the directory on the server that corresponds to this repo's root — every local path is mirrored under it. There's no default; it's a required field because assuming `/` would be unsafe.
@@ -115,6 +116,38 @@ Left in place automatically: the `archive/` directory itself and hidden entries 
 It shows the full list of what will move and what stays, then asks for confirmation. `--dry-run` connects and prints that plan without changing anything. If a rename fails partway, it stops and reports how many items had already moved; the run log has every rename, and `wharf move archive/<timestamp>/<name> <name>` restores one item.
 
 Typical site-redesign flow: `wharf archive --keep robots.txt`, build the new site, then `wharf deploy`.
+
+### `wharf pull <remote-path> [local-path]`
+
+Downloads a remote file or directory. With no `local-path` the files mirror the repo layout (`<base>/a/b.html` lands at `<repo>/a/b.html`), so server-only files drop straight into the site. Existing local files are **never overwritten** unless you pass `--force`; they are listed as skipped. Downloaded files take the remote modification time, so a following `sync` treats them as unchanged. `--dry-run` shows the plan without downloading. `wharf pull .` pulls the whole site.
+
+### `wharf cat <remote-file>`
+
+Prints a remote file to stdout and nothing else, so it pipes cleanly (`wharf cat robots.txt | less`).
+
+### `wharf diff <local-file>`
+
+Shows a unified diff of the server's copy (`-`) against the local file (`+`), which is exactly what a deploy of that file would change. It reports "no differences", "binary files differ", or "does not exist on the server" as appropriate. Text diffs use the system `diff` command.
+
+### `wharf mkdir <remote-path>`
+
+Creates a remote directory and any missing parents. Succeeds quietly if it already exists and refuses if a file is in the way. `--dry-run` previews.
+
+### `wharf chmod [-r] <mode> <remote-path>`
+
+Changes permissions. `<mode>` is three octal digits (`644`, `755`); setuid/setgid/sticky bits are rejected. With `-r`/`--recursive` on a directory, files get `<mode>` and directories get the same mode plus execute wherever read is set (`644` makes files `644` and directories `755`), and it asks for confirmation first. `--dry-run` previews.
+
+### `wharf prune`
+
+Lists remote files that have no local counterpart, such as stale copies left behind after the site's layout changed. **It never deletes**: it prints the `wharf delete <path>` commands to run if you agree. Each orphan is labelled either "not present locally" or "present locally but excluded by `.wharfignore`". The `archive/` directory and hidden top-level entries (`.well-known`, ...) are skipped and reported.
+
+### `wharf restore <remote-path>`
+
+Re-uploads a file from the local pre-overwrite backups that `copy`/`sync`/`deploy` make. By default it restores the newest backup. `--list` shows what is available (no connection needed), `--from <name>` picks one by directory name or timestamp prefix. The file being replaced is backed up first, so a restore can itself be undone. Asks for confirmation; `--dry-run` previews. Files only (backups of deleted directories are plain folders under `scripts/wharf/backups/`).
+
+### `wharf verify [--base-url URL]`
+
+Requests the public URL of every site file (and the directory URL of every `index.html`) and reports anything that is not a 2xx response, or whose served size differs from the local file. A successful upload only means a file landed; this checks the site actually serves it. HTTP errors and network failures exit non-zero; size mismatches are warnings, since a host may legitimately rewrite content. The base URL comes from `--base-url` or an optional `base_url = "https://example.com"` line in `.wharf`.
 
 ## Pre-overwrite backups (`copy` / `sync` / `deploy`)
 

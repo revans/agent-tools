@@ -7,7 +7,7 @@ Claude Code skill that teaches an agent to drive it.
   CLIs that share a design: write a Markdown template, name an account and a
   destination, send.
 - **`wharf`**: SFTP deployment for static sites: explore, sync, move, archive,
-  and (carefully) delete. See [wharf/README.md](wharf/README.md).
+  pull, diff, verify, restore, and (carefully) delete. See [wharf/README.md](wharf/README.md).
 
 ```bash
 notif-slack post --account gierd --channel releases --template deploy \
@@ -21,7 +21,7 @@ notif-tg     post --account gierd --chat releases --template deploy \
 | --- | --- | --- |
 | [`notif-slack`](notif-slack) | Slack | post, read a channel or thread, reply in thread |
 | [`notif-tg`](notif-tg) | Telegram | send, read messages sent to the bot, watch, reply |
-| [`wharf`](wharf) | SFTP | explore, sync, deploy, move, archive, delete |
+| [`wharf`](wharf) | SFTP | explore, sync, deploy, move, archive, pull, diff, verify, restore, prune, delete |
 
 Each keeps its own external TOML file holding every account, every destination
 and every credential, so nothing is hard-coded and no token is ever passed on

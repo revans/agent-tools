@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"wharf/internal/cli"
 	"wharf/internal/commands"
 	"wharf/internal/config"
 	"wharf/internal/logging"
@@ -26,9 +27,26 @@ Usage:
   wharf move [flags] <from> <to>   Rename/move a remote file or directory (never overwrites)
   wharf archive [flags] [--keep <name>]...
                                     Move everything at the site root into archive/<timestamp>/
+  wharf pull [flags] <remote-path> [local-path]
+                                    Download a remote file or directory (never overwrites without --force)
+  wharf cat <remote-file>          Print a remote file to stdout
+  wharf diff <local-file>          Unified diff of the server's copy against the local file
+  wharf mkdir [flags] <remote-path>
+                                    Create a remote directory (and parents)
+  wharf chmod [flags] <mode> <remote-path>
+                                    Change remote permissions (-r/--recursive for a tree)
+  wharf prune                      List remote files with no local counterpart (never deletes)
+  wharf restore [flags] <remote-path>
+                                    Re-upload a file from wharf's local pre-overwrite backups
+  wharf verify [--base-url URL]    Request each deployed file's public URL and report failures
 
 Flags:
   --dry-run    copy/sync/deploy/delete/move/archive: show what would happen, make no changes (all but copy still connect to inspect)
+  --force      pull: overwrite existing local files
+  --list       restore: show available backups and exit
+  --from NAME  restore: use this backup (directory name or timestamp prefix), not the newest
+  -r, --recursive  chmod: apply to a whole directory tree
+  --base-url   verify: public site URL (default: base_url in .wharf)
   --keep NAME  archive: leave this top-level entry in place (repeatable; hidden entries and archive/ are always kept)
   --no-backup  copy/sync/deploy: skip the automatic pre-overwrite backup of an existing remote file
 
@@ -186,6 +204,91 @@ func run(command, repoRoot string, logger *logging.Logger) error {
 			return fmt.Errorf("archive takes no positional arguments (optionally --dry-run and --keep NAME)")
 		}
 		return commands.Archive(cfg, keep, dryRun, logger, os.Stdin, os.Stdout)
+
+	case "pull":
+		p, err := cli.Parse(os.Args[2:], map[string]string{"--dry-run": cli.Bool, "--force": cli.Bool})
+		if err != nil {
+			return err
+		}
+		if len(p.Args) < 1 || len(p.Args) > 2 {
+			return fmt.Errorf("pull requires <remote-path> and optionally <local-path> (flags: --dry-run, --force)")
+		}
+		local := ""
+		if len(p.Args) == 2 {
+			local = p.Args[1]
+		}
+		return commands.Pull(cfg, repoRoot, p.Args[0], local, p.Bools["--dry-run"], p.Bools["--force"], logger, os.Stdout)
+
+	case "cat":
+		p, err := cli.Parse(os.Args[2:], nil)
+		if err != nil {
+			return err
+		}
+		if len(p.Args) != 1 {
+			return fmt.Errorf("cat requires exactly one argument: <remote-file>")
+		}
+		return commands.Cat(cfg, p.Args[0], logger, os.Stdout)
+
+	case "diff":
+		p, err := cli.Parse(os.Args[2:], nil)
+		if err != nil {
+			return err
+		}
+		if len(p.Args) != 1 {
+			return fmt.Errorf("diff requires exactly one argument: <local-file>")
+		}
+		return commands.Diff(cfg, repoRoot, p.Args[0], logger, os.Stdout)
+
+	case "mkdir":
+		p, err := cli.Parse(os.Args[2:], map[string]string{"--dry-run": cli.Bool})
+		if err != nil {
+			return err
+		}
+		if len(p.Args) != 1 {
+			return fmt.Errorf("mkdir requires exactly one argument: <remote-path>")
+		}
+		return commands.Mkdir(cfg, p.Args[0], p.Bools["--dry-run"], logger, os.Stdout)
+
+	case "chmod":
+		p, err := cli.Parse(os.Args[2:], map[string]string{"--dry-run": cli.Bool, "-r": cli.Bool, "--recursive": cli.Bool})
+		if err != nil {
+			return err
+		}
+		if len(p.Args) != 2 {
+			return fmt.Errorf("chmod requires <mode> and <remote-path> (e.g. wharf chmod 644 index.html)")
+		}
+		rec := p.Bools["-r"] || p.Bools["--recursive"]
+		return commands.Chmod(cfg, p.Args[0], p.Args[1], rec, p.Bools["--dry-run"], logger, os.Stdin, os.Stdout)
+
+	case "prune":
+		p, err := cli.Parse(os.Args[2:], nil)
+		if err != nil {
+			return err
+		}
+		if len(p.Args) != 0 {
+			return fmt.Errorf("prune takes no arguments (it only reports; use wharf delete to remove)")
+		}
+		return commands.Prune(cfg, repoRoot, logger, os.Stdout)
+
+	case "restore":
+		p, err := cli.Parse(os.Args[2:], map[string]string{"--dry-run": cli.Bool, "--list": cli.Bool, "--from": cli.Value})
+		if err != nil {
+			return err
+		}
+		if len(p.Args) != 1 {
+			return fmt.Errorf("restore requires exactly one argument: <remote-path> (flags: --list, --from NAME, --dry-run)")
+		}
+		return commands.Restore(cfg, repoRoot, p.Args[0], p.Vals["--from"], p.Bools["--list"], p.Bools["--dry-run"], logger, os.Stdin, os.Stdout)
+
+	case "verify":
+		p, err := cli.Parse(os.Args[2:], map[string]string{"--base-url": cli.Value})
+		if err != nil {
+			return err
+		}
+		if len(p.Args) != 0 {
+			return fmt.Errorf("verify takes no positional arguments (optionally --base-url URL)")
+		}
+		return commands.Verify(cfg, repoRoot, p.Vals["--base-url"], logger, os.Stdout)
 
 	default:
 		usage()

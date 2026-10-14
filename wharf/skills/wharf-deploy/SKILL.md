@@ -23,6 +23,14 @@ password.
 | `wharf move <from> <to>` | Rename on the server; never overwrites |
 | `wharf archive [--keep name]...` | Move the site root's contents into `archive/<timestamp>/` |
 | `wharf delete <path>` | Delete a remote file or directory (confirms, offers backup) |
+| `wharf pull <path> [local]` | Download a remote file/dir; never overwrites without `--force` |
+| `wharf cat <file>` | Print a remote file to stdout |
+| `wharf diff <local-file>` | Unified diff of the server's copy vs the local file |
+| `wharf mkdir <path>` | Create a remote directory |
+| `wharf chmod [-r] <mode> <path>` | Change remote permissions (`644`, `755`) |
+| `wharf prune` | List remote files with no local counterpart; never deletes |
+| `wharf restore <path>` | Re-upload from local pre-overwrite backups (`--list`, `--from`) |
+| `wharf verify` | HTTP-check every deployed file's public URL |
 
 Remote paths are relative to `remote_base_path`. `--dry-run` works on all of
 them and changes nothing.
@@ -45,6 +53,15 @@ them and changes nothing.
    the live site; do not pass them an unprompted `y`.
 7. **Restore one item** from an archive with
    `wharf move archive/<timestamp>/<name> <name>`.
+8. **After every deploy, run `wharf verify`.** A successful upload does not
+   prove the site works; verify requests each URL and fails on any non-2xx.
+9. **Before deploying a file, `wharf diff` shows what would change.** Use
+   `wharf prune` to find stale files, then `wharf delete` each one the user
+   approves; prune itself never deletes.
+10. **Server-only files** (robots.txt, favicons) should be brought into the
+    repo with `wharf pull <path>` so they are versioned and redeployed.
+11. **Undo a bad upload** with `wharf restore <path>` (newest local backup),
+    or `wharf restore --list <path>` to choose one.
 
 ## Reading results
 

@@ -21,6 +21,11 @@ type Config struct {
 	Username       string `toml:"username"`
 	Password       string `toml:"password"`
 	RemoteBasePath string `toml:"remote_base_path"`
+
+	// BaseURL is the public URL the remote base path is served at, e.g.
+	// "https://example.com". Optional: only `wharf verify` uses it, and it
+	// can be overridden with --base-url.
+	BaseURL string `toml:"base_url"`
 }
 
 // Validate checks that every required field was actually populated. TOML
