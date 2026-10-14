@@ -1,7 +1,13 @@
-# notif
+# agent-tools
 
-Markdown notifications, addressed by name. Two CLIs that share a design:
-write a Markdown template, name an account and a destination, send.
+Command-line tools for agents and the people working with them. Each ships a
+Claude Code skill that teaches an agent to drive it.
+
+- **`notif-slack`, `notif-tg`**: Markdown notifications, addressed by name. Two
+  CLIs that share a design: write a Markdown template, name an account and a
+  destination, send.
+- **`wharf`**: SFTP deployment for static sites: explore, sync, move, archive,
+  and (carefully) delete. See [wharf/README.md](wharf/README.md).
 
 ```bash
 notif-slack post --account gierd --channel releases --template deploy \
@@ -15,6 +21,7 @@ notif-tg     post --account gierd --chat releases --template deploy \
 | --- | --- | --- |
 | [`notif-slack`](notif-slack) | Slack | post, read a channel or thread, reply in thread |
 | [`notif-tg`](notif-tg) | Telegram | send, read messages sent to the bot, watch, reply |
+| [`wharf`](wharf) | SFTP | explore, sync, deploy, move, archive, delete |
 
 Each keeps its own external TOML file holding every account, every destination
 and every credential, so nothing is hard-coded and no token is ever passed on
@@ -27,9 +34,9 @@ Each also ships a Claude Code skill that teaches an agent to drive it.
 ## Build
 
 ```bash
-make              # build both binaries in release mode
+make              # build every binary in release mode
 make install      # and put them on your PATH
-make skills       # symlink both Claude Code skills into ~/.claude/skills
+make skills       # symlink the Claude Code skills into ~/.claude/skills
 make check        # fmt, clippy and tests
 make help         # every target
 ```
@@ -56,12 +63,14 @@ and the full command list.
 ## Layout
 
 ```
-notif/
+agent-tools/
 ├── Makefile           build, test, install, skills
 ├── Cargo.toml         workspace: shared dependency versions and release profile
 ├── notif-slack/       the Slack CLI, its templates and its skill
-└── notif-tg/          the Telegram CLI, its templates and its skill
+├── notif-tg/          the Telegram CLI, its templates and its skill
+└── wharf/             the SFTP deploy CLI (Go) and its skill
 ```
 
-One workspace, one lockfile, one `target/`, so the two crates cannot drift apart
-on a dependency version.
+The two Rust crates share one workspace, one lockfile and one `target/`, so they
+cannot drift apart on a dependency version. `wharf` is a separate Go module; the
+Makefile builds it into the same `target/release/`.
