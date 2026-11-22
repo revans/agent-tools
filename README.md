@@ -9,6 +9,10 @@ Claude Code skill that teaches an agent to drive it.
 - **`wharf`**: SFTP deployment for static sites: explore, sync, move, archive,
   pull, diff, verify, restore, and (carefully) delete. See [wharf/README.md](wharf/README.md).
 
+- **`agent-tools-mcp`**: one MCP server that gives Claude Code, Codex and Grok
+  (and, over HTTP with OAuth, claude.ai and ChatGPT web) all of these tools,
+  plus `docli` for DigitalOcean. See [mcp/README.md](mcp/README.md).
+
 ```bash
 notif-slack post --account gierd --channel releases --template deploy \
                  --var service=api --var version=v2.3.1
