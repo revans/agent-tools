@@ -72,7 +72,7 @@ That one command:
 Check it:
 
 ```bash
-agent-tools-mcp -list          # the tools it will serve (38)
+agent-tools-mcp -list          # the tools it will serve (52; 58 with -allow destructive)
 claude mcp list                # agent-tools: ... ✔ Connected
 codex mcp list                 # agent-tools ... enabled
 grok mcp list                  # agent-tools: ...
@@ -97,6 +97,10 @@ in with `notif-slack migrate` and `notif-tg migrate`.
 | `tg_*` | `notif-tg init` (adds `[notif-tg]`), add a BotFather token; check with `notif-tg check` | [notif-tg/README.md](../tools/notif-tg/README.md) |
 | `wharf_*` | a `.wharf` file at the root of your site repo | [wharf/README.md](../tools/wharf/README.md) |
 | `reddit_*` | `reddit init` (adds `[reddit]`), then add a Reddit app's client id and secret; check with `reddit check` | [reddit/README.md](../tools/reddit/README.md) |
+| `youtube_*` | `youtube init`, then add a YouTube Data API key; check with `youtube check` | [youtube/README.md](../tools/youtube/README.md) |
+| `x_*` | `x init`, then add the four OAuth 1.0a keys from the X developer portal; check with `x check` | [x/README.md](../tools/x/README.md) |
+| `linkedin_*` | `linkedin init`, then paste an access token (about 60 days; no login flow yet); check with `linkedin check` | [linkedin/README.md](../tools/linkedin/README.md) |
+| `instagram_*` | `instagram init`, then paste a long-lived token (about 60 days; no login flow yet); check with `instagram check` | [instagram/README.md](../tools/instagram/README.md) |
 | `docli_*` | `DIGITALOCEAN_TOKEN`, or a token in `~/.config/docli/token` (mode 0600) | [docli/README.md](../tools/docli/README.md) |
 
 Two of those are per project: **wharf** reads `.wharf` and **docli plan** reads
@@ -178,8 +182,21 @@ Tips:
 
 ## Tool reference
 
-38 tools. **Read** tools change nothing. **Write** tools change something
-reversible or additive. No destructive tool ships built in.
+52 tools are on by default, and 58 with `-allow destructive`. **Read** tools
+change nothing. **Write** tools change something reversible or additive.
+**Destructive** tools do something public or permanent that cannot be undone:
+the six that publish to X, LinkedIn and Instagram. They are **off by default**.
+The server does not register them, so an assistant cannot see them, until you
+start it with `-allow destructive`:
+
+```bash
+make mcp-register MCP_ALLOW=destructive      # registers the server with -allow destructive
+# or by hand:
+claude mcp add --scope user agent-tools -- agent-tools-mcp -allow destructive
+```
+
+Even then, your assistant's own permission prompt still stands between a request
+and a post.
 
 | Group | Tool | Safety | What it does |
 | --- | --- | --- | --- |
@@ -200,6 +217,15 @@ reversible or additive. No destructive tool ships built in.
 | Reddit | `reddit_search`, `reddit_fetch` | read | Search; one post with its best comments |
 | | `reddit_read` | read | Call any read-only Reddit endpoint by name, including ones you add under `~/.config/agent-tools/reddit/endpoints.d` |
 | | `reddit_endpoints` | read | List endpoints or show one's parameters |
+| YouTube | `youtube_search` | read | Search for videos (up to 10: title, channel, URL, snippet, date) |
+| | `youtube_read`, `youtube_endpoints` | read | Call any read-only endpoint by name (videos, channels, ...); list endpoints |
+| X | `x_search`, `x_timeline`, `x_thread`, `x_profile_metrics`, `x_engagement_baseline` | read | Search recent posts, an account's posts, a post's metrics and replies, your profile counts, average engagement |
+| | `x_read`, `x_endpoints` | read | Call any read-only endpoint by name; list endpoints |
+| | `x_post`, `x_reply` | **destructive** | Publish a post or reply, with an optional image. Public and permanent |
+| LinkedIn | `linkedin_post` | **destructive** | Publish a post with an optional image. Public and permanent |
+| | `linkedin_read`, `linkedin_endpoints` | read | Call any read-only endpoint by name; list endpoints |
+| Instagram | `instagram_post`, `instagram_comment`, `instagram_reply` | **destructive** | Publish an image post, a comment, or a reply. Public and permanent |
+| | `instagram_read`, `instagram_endpoints` | read | Call any read-only endpoint by name; list endpoints |
 | docli | `docli_token_check`, `docli_sizes`, `docli_regions`, `docli_images` | read | Account and catalog |
 | | `docli_droplet_list`, `docli_droplet_get`, `docli_vpc_list`, `docli_firewall_list`, `docli_ssh_key_list`, `docli_db_list`, `docli_domain_list`, `docli_dns_list` | read | Inventory |
 | | `docli_plan` | read | What `apply` would change and cost. Exit code 2 ("there are changes") is a normal result |
@@ -214,8 +240,14 @@ manifest entry (below) when you want them.
 - **Safety levels.** Every tool is `read`, `write` or `destructive`. The server
   registers tools up to `-allow` (default `write`); anything above is not
   registered at all, so the model cannot see it. Run `agent-tools-mcp -allow
-  read` for a read-only server. Clients also receive read-only and destructive
-  hints so they can prompt you.
+  read` for a read-only server, or `-allow destructive` to add the tools that
+  publish. Clients also receive read-only and destructive hints so they can
+  prompt you. A test asserts that the default server offers none of the
+  destructive tools, and that each one says it is public and cannot be undone.
+- **Every tool's flags are checked against the real CLI.** A test runs each
+  built-in tool, with a value for every parameter, against its actual binary and
+  fails on any flag or command the CLI does not know, so a typo in a manifest
+  cannot reach an assistant.
 - **No shell, no injection.** Arguments are checked against the manifest
   (types, enums, required, unknown names rejected). Flags go in as
   `--flag=value` and positionals after `--`, so a value like `-rf` is data, not
@@ -388,6 +420,7 @@ Decisions you should know about:
 | `no config file found (looked at ./agent-tools.toml, ~/.config/agent-tools/config.toml, ...)` | Run `notif-slack init` (or the tool's own `init`) and add a token. See [credentials](#set-up-the-tools-credentials). |
 | A token works in your shell but not through the assistant | The assistant filtered the environment. Put the credential in the CLI's config file, or pass it with `--env`. |
 | `docli_plan` reports a result with "exit code 2" | Not an error: it means the plan has changes. |
+| `x_post`, `linkedin_post` or an `instagram_*` publishing tool is missing | They are destructive and off by default. Re-register with `make mcp-register MCP_ALLOW=destructive`, or add `-allow destructive` to the server's command. |
 | A tool you added does not appear | `agent-tools-mcp -list`. Check its `safety` is at or below `-allow`, then restart the assistant (tool lists are read at start). |
 | `grok`: "Not signed in" | `grok login` (or `--device-code`). |
 | Codex shows the call as "(failed)" | The CLI returned an error. The text of the error is in the result; it is not a connection fault. |

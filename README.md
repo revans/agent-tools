@@ -11,6 +11,12 @@ Claude Code skill that teaches an agent to drive it.
 - **`docli`**: manage DigitalOcean droplets, VPCs, firewalls, DNS and databases from
   the command line, with a plan before every change. See [tools/docli/README.md](tools/docli/README.md).
 
+- **`x`, `youtube`, `linkedin`, `instagram`**: the X, YouTube, LinkedIn and
+  Instagram APIs, rebuilt from Mimir's tools on the same library: search and read,
+  and publish (posts, replies, comments, with images). See
+  [tools/x](tools/x/README.md), [tools/youtube](tools/youtube/README.md),
+  [tools/linkedin](tools/linkedin/README.md) and
+  [tools/instagram](tools/instagram/README.md).
 - **`reddit`**: search Reddit and read posts with their top comments. Built on
   [`apikit`](libs/apikit/README.md), where a new API endpoint is a few lines of
   TOML. See [tools/reddit/README.md](tools/reddit/README.md).
@@ -33,6 +39,10 @@ notif-tg     post --account gierd --chat releases --template deploy \
 | [`wharf`](tools/wharf) | SFTP | explore, sync, deploy, move, archive, pull, diff, verify, restore, prune, delete |
 | [`docli`](tools/docli) | DigitalOcean | droplets, VPCs, firewalls, DNS, databases; plan, apply |
 | [`reddit`](tools/reddit) | Reddit | search, fetch a post with comments, any endpoint |
+| [`x`](tools/x) | X | search, timelines, threads, profile and engagement metrics, post, reply |
+| [`youtube`](tools/youtube) | YouTube | search videos, any endpoint |
+| [`linkedin`](tools/linkedin) | LinkedIn | publish a post with an image |
+| [`instagram`](tools/instagram) | Instagram | publish an image, comment, reply |
 
 Each keeps its own external TOML file holding every account, every destination
 and every credential, so nothing is hard-coded and no token is ever passed on
