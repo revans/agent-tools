@@ -2,6 +2,7 @@ package apikit
 
 import (
 	"bytes"
+	"errors"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -132,6 +133,9 @@ func TestNotFoundNamesEveryPlace(t *testing.T) {
 	_, err := newTmp(t).locator().Load("reddit", "")
 	if err == nil {
 		t.Fatal("expected an error")
+	}
+	if !errors.Is(err, ErrNoConfig) {
+		t.Errorf("a missing config must be ErrNoConfig, so a tool that needs none can carry on: %v", err)
 	}
 	for _, want := range []string{"agent-tools.toml", "agent-tools/config.toml", "reddit/config.toml", "reddit.toml", "reddit init"} {
 		if !strings.Contains(err.Error(), want) {
@@ -285,5 +289,23 @@ func TestCLIInitWritesTheSharedFileAndWhereExplains(t *testing.T) {
 	}
 	if code, out = do("accounts"); code != 0 || !strings.Contains(out, `"a"`) {
 		t.Errorf("accounts from the shared file: %d %s", code, out)
+	}
+}
+
+func TestSettingsExposeKeysBeyondAccounts(t *testing.T) {
+	x := newTmp(t)
+	x.write("home/agent-tools/config.toml", "[posts]\npath = \"/tmp/p.jsonl\"\n[posts.refresh.x]\ncommand = [\"x\", \"thread\", \"{remote_id}\"]\n[reddit]\nx = 1\n", 0o600)
+	c, err := x.locator().Load("posts", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if c.Settings["path"] != "/tmp/p.jsonl" || c.Settings["refresh"] == nil {
+		t.Errorf("settings: %v", c.Settings)
+	}
+	if _, has := c.Settings["x"]; has {
+		t.Error("another tool's table must not leak into this tool's settings")
+	}
+	if len(c.Accounts) != 0 {
+		t.Errorf("a tool with no accounts has none: %v", c.Accounts)
 	}
 }

@@ -90,12 +90,19 @@ func envName(tool, suffix string) string {
 	return strings.ToUpper(strings.ReplaceAll(tool, "-", "_")) + "_" + suffix
 }
 
+// ErrNoConfig is returned (wrapped) when no config file exists anywhere a
+// lookup looks. A tool that works without any config can test for it.
+var ErrNoConfig = errors.New("no config file found")
+
 // Config is a tool's settings: named accounts plus an optional default.
 type Config struct {
 	Path     string
 	Unified  bool // true when the settings came from the shared file
 	Default  string
 	Accounts map[string]map[string]any
+	// Settings is everything in the tool's table (or the tool's own file), for a
+	// tool with keys beyond accounts.
+	Settings map[string]any
 	tool     string
 }
 
@@ -164,8 +171,8 @@ func (l Locator) Load(tool, explicit string) (*Config, error) {
 			return loadFile(tool, cand)
 		}
 	}
-	return nil, fmt.Errorf("no config file found (looked at %s). Run `%s init` to create one",
-		strings.Join(l.Searched(tool), ", "), tool)
+	return nil, fmt.Errorf("%w (looked at %s). Run `%s init` to create one",
+		ErrNoConfig, strings.Join(l.Searched(tool), ", "), tool)
 }
 
 func loadFile(tool, path string) (*Config, error) {
@@ -196,6 +203,7 @@ func loadFile(tool, path string) (*Config, error) {
 		}
 		c.Default = s
 	}
+	c.Settings = settings
 	c.Accounts = map[string]map[string]any{}
 	if a, ok := settings["accounts"]; ok {
 		tbl, ok := a.(map[string]any)
