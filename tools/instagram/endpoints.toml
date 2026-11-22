@@ -1,0 +1,111 @@
+# Instagram Graph API endpoints (Instagram API with Instagram Login). Add your
+# own in ~/.config/agent-tools/instagram/endpoints.d/*.toml, in the same format,
+# and `instagram call NAME` runs them. Base URL: graph.instagram.com, version
+# v25.0 (the version Mimir uses), both settable per account.
+#
+# All of these mirror requests Mimir makes. The access token is added by the
+# tool (in the JSON body of a POST, the query string of a GET); never pass it as
+# a parameter.
+
+[[endpoint]]
+name = "me"
+description = "The account the access token belongs to: its Instagram user id and username. The cheapest call that proves the token works."
+method = "GET"
+path = "/me"
+safety = "read"
+select = "data"
+  [[endpoint.param]]
+  name = "fields"
+  default = "user_id,username"
+  description = "Comma-separated fields to return."
+
+[[endpoint]]
+name = "container_status"
+description = "Whether a media container is ready to publish: status_code is IN_PROGRESS, FINISHED, PUBLISHED, ERROR or EXPIRED."
+method = "GET"
+path = "/{container_id}"
+safety = "read"
+  [endpoint.fixed]
+  fields = "status_code"
+  [[endpoint.param]]
+  name = "container_id"
+  in = "path"
+  required = true
+  description = "Container id returned by container_create."
+
+[[endpoint]]
+name = "container_create"
+description = "Step 1 of posting a photo: create a media container from a public JPEG URL and a caption. Publishes nothing yet; `instagram post` runs both steps."
+method = "POST"
+path = "/{user_id}/media"
+safety = "write"
+body = "json"
+  [[endpoint.param]]
+  name = "user_id"
+  in = "path"
+  required = true
+  description = "The Instagram user id (from `instagram call me`)."
+  [[endpoint.param]]
+  name = "image_url"
+  in = "body"
+  required = true
+  description = "Public URL of a JPEG image."
+  [[endpoint.param]]
+  name = "caption"
+  in = "body"
+  required = true
+  description = "Caption, up to 2200 characters."
+
+[[endpoint]]
+name = "media_publish"
+description = "Step 2 of posting a photo: publish a container publicly. This cannot be undone."
+method = "POST"
+path = "/{user_id}/media_publish"
+safety = "write"
+body = "json"
+  [[endpoint.param]]
+  name = "user_id"
+  in = "path"
+  required = true
+  description = "The Instagram user id."
+  [[endpoint.param]]
+  name = "creation_id"
+  in = "body"
+  required = true
+  description = "Container id returned by container_create."
+
+[[endpoint]]
+name = "comment_create"
+description = "Post a new top-level public comment on a media object of the account. This cannot be undone through this tool."
+method = "POST"
+path = "/{media_id}/comments"
+safety = "write"
+body = "json"
+  [[endpoint.param]]
+  name = "media_id"
+  in = "path"
+  required = true
+  description = "Numeric id of the media to comment on."
+  [[endpoint.param]]
+  name = "message"
+  in = "body"
+  required = true
+  description = "Comment text, up to 2200 characters."
+
+[[endpoint]]
+name = "reply_create"
+description = "Post a public reply to an existing comment. This cannot be undone through this tool."
+method = "POST"
+path = "/{comment_id}/replies"
+safety = "write"
+body = "json"
+  [[endpoint.param]]
+  name = "comment_id"
+  in = "path"
+  required = true
+  description = "Numeric id of the comment to reply to."
+  [[endpoint.param]]
+  name = "message"
+  in = "body"
+  required = true
+  description = "Reply text, up to 2200 characters."

@@ -1,0 +1,118 @@
+# Instagram tools (the instagram CLI, built on apikit). The access token lives in
+# the [instagram] table of ~/.config/agent-tools/config.toml. instagram_read runs
+# any read-only endpoint by name. There is deliberately no generic write tool:
+# posting, commenting and replying are the three named tools below.
+
+[[tool]]
+name = "instagram_post"
+description = "Publish a photo with a caption to the Instagram account PUBLICLY. This cannot be undone through this tool. image_url must be a public URL of a JPEG (local files are not accepted; upload the image first). Caption: at most 2200 characters. Returns the new media id."
+bin = "instagram"
+args = ["post"]
+safety = "destructive"
+timeout = "120s"
+  [[tool.param]]
+  name = "caption"
+  type = "string"
+  flag = "--caption"
+  required = true
+  description = "The exact caption to publish (max 2200 characters)."
+  [[tool.param]]
+  name = "image_url"
+  type = "string"
+  flag = "--image-url"
+  required = true
+  description = "A direct, already-public https URL of a JPEG image."
+  [[tool.param]]
+  name = "account"
+  type = "string"
+  flag = "--account"
+  description = "Account name from the instagram config. Optional when there is one account or a default."
+
+[[tool]]
+name = "instagram_comment"
+description = "Post a new top-level comment on one of the account's own Instagram media, PUBLICLY. This cannot be undone through this tool. media_id is the numeric id returned by instagram_post or supplied by the user. Message: at most 2200 characters."
+bin = "instagram"
+args = ["comment"]
+safety = "destructive"
+  [[tool.param]]
+  name = "media_id"
+  type = "string"
+  flag = "--media-id"
+  required = true
+  description = "Numeric id of the media to comment on."
+  [[tool.param]]
+  name = "message"
+  type = "string"
+  flag = "--message"
+  required = true
+  description = "The exact comment text (max 2200 characters)."
+  [[tool.param]]
+  name = "account"
+  type = "string"
+  flag = "--account"
+  description = "Account name from the instagram config."
+
+[[tool]]
+name = "instagram_reply"
+description = "Post a reply to an existing Instagram comment, PUBLICLY. This cannot be undone through this tool. comment_id is the numeric id of the comment, supplied by the user. Message: at most 2200 characters."
+bin = "instagram"
+args = ["reply"]
+safety = "destructive"
+  [[tool.param]]
+  name = "comment_id"
+  type = "string"
+  flag = "--comment-id"
+  required = true
+  description = "Numeric id of the comment to reply to."
+  [[tool.param]]
+  name = "message"
+  type = "string"
+  flag = "--message"
+  required = true
+  description = "The exact reply text (max 2200 characters)."
+  [[tool.param]]
+  name = "account"
+  type = "string"
+  flag = "--account"
+  description = "Account name from the instagram config."
+
+[[tool]]
+name = "instagram_read"
+description = "Call any read-only Instagram API endpoint by name and return its JSON, for example `me` (who the token belongs to) or `container_status`. Use instagram_endpoints first to see the endpoint names and their parameters. Cannot post, comment or reply."
+bin = "instagram"
+args = ["call", "--max-safety=read"]
+safety = "read"
+timeout = "90s"
+  [[tool.param]]
+  name = "endpoint"
+  type = "string"
+  positional = true
+  required = true
+  description = "Endpoint name, e.g. me."
+  [[tool.param]]
+  name = "params"
+  type = "map"
+  flag = "--param"
+  description = "The endpoint's parameters as an object of strings, e.g. {\"container_id\": \"1789...\"}."
+  [[tool.param]]
+  name = "pages"
+  type = "integer"
+  flag = "--pages"
+  description = "For endpoints that paginate: follow the cursor for up to this many pages."
+  [[tool.param]]
+  name = "account"
+  type = "string"
+  flag = "--account"
+  description = "Account name from the instagram config."
+
+[[tool]]
+name = "instagram_endpoints"
+description = "List the Instagram API endpoints, or describe one in detail (parameters, types, which are required, whether it reads or writes)."
+bin = "instagram"
+args = ["endpoints"]
+safety = "read"
+  [[tool.param]]
+  name = "endpoint"
+  type = "string"
+  positional = true
+  description = "Describe this one endpoint. Omit to list all."
