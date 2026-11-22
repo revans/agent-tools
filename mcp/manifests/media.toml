@@ -1,0 +1,89 @@
+# Media tools (the media CLI). Purely local: no network, no credentials. Use them
+# to prepare an image before posting it with x_post, linkedin_post or the
+# instagram tools. Paths are relative to the server's working directory.
+
+[[tool]]
+name = "media_profiles"
+description = "List the image profiles media knows (instagram, x, linkedin, and any the owner added): accepted formats, maximum bytes, size and aspect limits, and where each limit came from. Use it to see what a platform accepts before preparing an image."
+bin = "media"
+args = ["profiles"]
+safety = "read"
+
+[[tool]]
+name = "media_info"
+description = "Describe one image file: format, width, height, bytes, whether it has transparency, whether it is an animated GIF, and the EXIF orientation of a JPEG. Reads the file; changes nothing. The path is relative to the working directory."
+bin = "media"
+args = ["info"]
+safety = "read"
+  [[tool.param]]
+  name = "file"
+  type = "string"
+  positional = true
+  required = true
+  description = "Path to the image, relative to the working directory."
+  example = "photo.png"
+
+[[tool]]
+name = "media_check"
+description = "Check whether an image already satisfies a platform profile (for example instagram, x or linkedin). Returns ok and a list of problems in words. Changes nothing. Use it before posting, and use media_fit when it reports problems. The path is relative to the working directory."
+bin = "media"
+args = ["check"]
+safety = "read"
+  [[tool.param]]
+  name = "profile"
+  type = "string"
+  flag = "--for"
+  required = true
+  description = "Profile name from media_profiles, e.g. instagram."
+  example = "instagram"
+  [[tool.param]]
+  name = "file"
+  type = "string"
+  positional = true
+  required = true
+  description = "Path to the image, relative to the working directory."
+  example = "photo.png"
+
+[[tool]]
+name = "media_fit"
+description = "Write a new image file that satisfies a platform profile: convert the format (e.g. PNG to JPEG for Instagram), apply the EXIF rotation, flatten transparency, pad or crop to an allowed aspect ratio, scale to the size limits and compress under the byte limit. Never modifies or overwrites the original, and refuses to overwrite an existing output unless force is set. The output directory must already exist. Animated GIFs cannot be resized or converted. Returns the output path, its size and a list of what was changed; if the image already fits, nothing is written and changes is empty. Paths are relative to the working directory."
+bin = "media"
+args = ["fit"]
+safety = "write"
+  [[tool.param]]
+  name = "profile"
+  type = "string"
+  flag = "--for"
+  required = true
+  description = "Profile name from media_profiles, e.g. instagram."
+  example = "instagram"
+  [[tool.param]]
+  name = "file"
+  type = "string"
+  positional = true
+  required = true
+  description = "Path to the source image, relative to the working directory. It is never changed."
+  example = "photo.png"
+  [[tool.param]]
+  name = "out"
+  type = "string"
+  flag = "--out"
+  description = "Where to write the result. Default: next to the input as NAME.PROFILE.EXT. The directory must exist."
+  example = "photo.instagram.jpg"
+  [[tool.param]]
+  name = "mode"
+  type = "string"
+  flag = "--mode"
+  description = "How to fix an aspect ratio that is out of range: pad (default, keeps all content, fills with the background) or crop (centered, loses edges)."
+  enum = ["pad", "crop"]
+  [[tool.param]]
+  name = "background"
+  type = "string"
+  flag = "--background"
+  description = "Fill color for padding and for flattening transparency, as #RRGGBB. Default #FFFFFF."
+  example = "#FFFFFF"
+  [[tool.param]]
+  name = "force"
+  type = "boolean"
+  flag = "--force"
+  description = "Overwrite the output if it already exists. Never overwrites the input."

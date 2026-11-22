@@ -1,0 +1,29 @@
+# Built-in media profiles. A profile describes what a platform accepts.
+# 0 means "no limit" for every number. The first format is the preferred output.
+# aspect is width / height.
+
+[[profile]]
+name = "instagram"
+description = "An Instagram feed image: JPEG only, 4:5 to 1.91:1, 320 to 1440 px wide, under 8 MB."
+formats = ["jpeg"]
+max_bytes = 8000000
+target_bytes = 7900000
+min_width = 320
+max_width = 1440
+min_aspect = 0.8
+max_aspect = 1.91
+source = "Meta, IG User Media reference, Image Specifications (developers.facebook.com/docs/instagram-platform/instagram-api-with-instagram-login/content-publishing)"
+
+[[profile]]
+name = "x"
+description = "An X (Twitter) post image: PNG, JPEG, GIF or WebP, up to 5 MiB. No dimension rule is known."
+formats = ["png", "jpeg", "gif", "webp"]
+max_bytes = 5242880
+source = "Mimir's x_post tool"
+
+[[profile]]
+name = "linkedin"
+description = "A LinkedIn post image: JPEG, PNG or GIF, up to 8 MiB. No dimension rule is enforced."
+formats = ["jpeg", "png", "gif"]
+max_bytes = 8388608
+source = "Mimir's linkedin_post tool"
