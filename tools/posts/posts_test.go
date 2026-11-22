@@ -320,6 +320,7 @@ func TestStatsUseOneVocabularyAcrossPlatforms(t *testing.T) {
 		"reddit":           {map[string]any{"score": 321.0, "num_comments": 14.0, "ups": 321.0}, map[string]float64{"comments": 14}},
 		"nested x":         {map[string]any{"id": "1", "public_metrics": map[string]any{"like_count": 8.0, "reply_count": 1.0}}, map[string]float64{"likes": 8, "comments": 1}},
 		"a canonical name": {map[string]any{"likes": 9.0, "like_count": 100.0}, map[string]float64{"likes": 9}},
+		"facebook":         {map[string]any{"reactions": 7.0, "comments": 2.0, "shares": 1.0, "post_media_view": 400.0, "post_total_media_view_unique": 250.0}, map[string]float64{"likes": 7, "comments": 2, "shares": 1, "views": 400, "reach": 250}},
 		"nothing known":    {map[string]any{"foo": 1.0}, nil},
 		"not an object":    {[]any{1.0}, nil},
 	}
@@ -614,7 +615,7 @@ func TestRefreshStaleSkipsPostsThatWereReadRecently(t *testing.T) {
 
 func TestDefaultRefreshCommandsExistForTheTools(t *testing.T) {
 	l := newLedger(t)
-	for _, p := range []string{"x", "instagram", "youtube", "reddit"} {
+	for _, p := range []string{"x", "instagram", "facebook", "youtube", "reddit"} {
 		rec(t, l, postlog.Entry{Platform: p, Account: "main", RemoteID: "id-" + p, Text: "t " + p})
 	}
 	rec(t, l, postlog.Entry{Platform: "linkedin", Account: "main", RemoteID: "urn", Text: "t li"})
@@ -632,6 +633,7 @@ func TestDefaultRefreshCommandsExistForTheTools(t *testing.T) {
 	want := map[string]string{
 		"x":         "[x thread id-x --account main]",
 		"instagram": "[instagram metrics id-instagram --account main]",
+		"facebook":  "[facebook metrics id-facebook --account main]",
 		"youtube":   "[youtube call videos --param id=id-youtube --account main]",
 		"reddit":    "[reddit call post_comments --param id=id-reddit --account main]",
 	}

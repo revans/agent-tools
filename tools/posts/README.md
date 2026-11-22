@@ -110,6 +110,7 @@ defaults, all read-only calls to tools in this repository:
 | --- | --- | --- |
 | `x` | `x thread {remote_id}` | views, likes, comments, shares, saves, quotes |
 | `instagram` | `instagram metrics {remote_id}` | likes and comments; views, reach, saves, shares if the token may read insights |
+| `facebook` | `facebook metrics {remote_id}` | reactions (likes), comments, shares; views and reach (`post_media_view`, `post_total_media_view_unique`: Meta retired `post_impressions`) if the token may read insights |
 | `youtube` | `youtube call videos --param id={remote_id}` | views, likes, comments (for a video recorded with `posts add`) |
 | `reddit` | `reddit call post_comments --param id={remote_id}` | score and comments (for a post recorded with `posts add`) |
 

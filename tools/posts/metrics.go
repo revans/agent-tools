@@ -16,7 +16,7 @@ import (
 var canonicalNames = map[string]string{
 	// views
 	"views": "views", "view_count": "views", "viewcount": "views", "views_count": "views",
-	"impression_count": "views", "impressions": "views", "impression": "views", "total_views": "views",
+	"impression_count": "views", "impressions": "views", "impression": "views", "total_views": "views", "post_impressions": "views", "post_media_view": "views",
 	// likes
 	"likes": "likes", "like_count": "likes", "likecount": "likes", "reaction": "likes", "reactions": "likes", "reaction_count": "likes",
 	// comments
@@ -29,7 +29,7 @@ var canonicalNames = map[string]string{
 	"saves": "saves", "saved": "saves", "saved_count": "saves", "save_count": "saves", "bookmark_count": "saves", "bookmarks": "saves",
 	// quotes and reach
 	"quotes": "quotes", "quote_count": "quotes",
-	"reach": "reach", "members_reached": "reach",
+	"reach": "reach", "members_reached": "reach", "post_impressions_unique": "reach", "post_total_media_view_unique": "reach",
 }
 
 // CanonicalOrder is the order the vocabulary is shown in.

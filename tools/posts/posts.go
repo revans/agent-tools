@@ -297,12 +297,13 @@ type refreshSpec struct {
 }
 
 // defaultRefresh is what works with the tools in this repository. X and Instagram
-// are the publishing tools; YouTube and Reddit are for posts recorded with
+// and Facebook are publishing tools; YouTube and Reddit are for posts recorded with
 // `posts add`. LinkedIn has none: reading a post's numbers there needs an approved
 // API product that its tool does not use.
 var defaultRefresh = map[string]refreshSpec{
 	"x":         {Command: []string{"x", "thread", "{remote_id}", "--account", "{account}"}, Select: "tweet"},
 	"instagram": {Command: []string{"instagram", "metrics", "{remote_id}", "--account", "{account}"}},
+	"facebook":  {Command: []string{"facebook", "metrics", "{remote_id}", "--account", "{account}"}},
 	"youtube":   {Command: []string{"youtube", "call", "videos", "--param", "id={remote_id}", "--account", "{account}"}, Select: "[0].statistics"},
 	"reddit":    {Command: []string{"reddit", "call", "post_comments", "--param", "id={remote_id}", "--account", "{account}"}, Select: "[0].data.children[0].data"},
 }
