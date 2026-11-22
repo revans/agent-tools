@@ -146,6 +146,14 @@ were verified live against X.
 | Subagent exclusion, tool confirmation plumbing, keychain | not included | Mimir internals |
 | `user_by_id`, `users_lookup`, `tweets_lookup`, `--pages` | added | not in Mimir; labeled unverified |
 
+## The post log
+
+Every successful post and reply is recorded in the post log (see [posts](../posts/README.md)),
+and `x` refuses to publish the same text to the same account twice within 30 days.
+`--allow-duplicate` overrides that and `--no-log` skips the record. A `--dry-run`
+never records, and only warns about a repeat. If the log cannot be written, the post
+still goes out and stderr says so.
+
 ## Not verified
 
 **Nothing here has been run against the live X API.** The tests use a fake X

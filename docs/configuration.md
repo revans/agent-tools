@@ -31,6 +31,21 @@ A tool's table holds exactly what its own file would hold at the top level. Movi
 a tool in or out is adding or removing the `[tool]` prefix on its headers, and
 `TOOL migrate` does it for you.
 
+## Settings beyond accounts
+
+Not every tool has accounts. `posts` has a `[posts]` table for how it refreshes
+metrics (see [tools/posts](../tools/posts/README.md#refreshing-metrics)):
+
+```toml
+[posts.refresh.x]
+command = ["x", "thread", "{remote_id}", "--account", "{account}"]
+select  = "tweet"
+```
+
+`posts` works with no config at all. The post log itself is state, not config: it
+lives at `~/.local/state/agent-tools/posts.jsonl` (`$AGENT_TOOLS_POSTS` to move it,
+`off` to disable it).
+
 ## Which tools use it
 
 | Tool | Reads |

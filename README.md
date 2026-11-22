@@ -17,6 +17,11 @@ Claude Code skill that teaches an agent to drive it.
   [tools/x](tools/x/README.md), [tools/youtube](tools/youtube/README.md),
   [tools/linkedin](tools/linkedin/README.md) and
   [tools/instagram](tools/instagram/README.md).
+- **`posts`** and **`media`**: the two that tie the publishing tools together.
+  `posts` is the ledger of what `x`, `linkedin` and `instagram` have published (they
+  record every post, and refuse to publish the same text twice); `media` fits an
+  image to a platform's rules before you post it. See
+  [tools/posts](tools/posts/README.md) and [tools/media](tools/media/README.md).
 - **`reddit`**: search Reddit and read posts with their top comments. Built on
   [`apikit`](libs/apikit/README.md), where a new API endpoint is a few lines of
   TOML. See [tools/reddit/README.md](tools/reddit/README.md).
@@ -39,6 +44,8 @@ notif-tg     post --account gierd --chat releases --template deploy \
 | [`wharf`](tools/wharf) | SFTP | explore, sync, deploy, move, archive, pull, diff, verify, restore, prune, delete |
 | [`docli`](tools/docli) | DigitalOcean | droplets, VPCs, firewalls, DNS, databases; plan, apply |
 | [`reddit`](tools/reddit) | Reddit | search, fetch a post with comments, any endpoint |
+| [`posts`](tools/posts) | the post log | list, find, report, store and refresh metrics |
+| [`media`](tools/media) | images | check and fit an image to Instagram, X or LinkedIn |
 | [`x`](tools/x) | X | search, timelines, threads, profile and engagement metrics, post, reply |
 | [`youtube`](tools/youtube) | YouTube | search videos, any endpoint |
 | [`linkedin`](tools/linkedin) | LinkedIn | publish a post with an image |

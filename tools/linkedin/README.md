@@ -106,6 +106,14 @@ tool through MCP.
 | OAuth connect flow, token storage in the keychain, refresh | not included | first version: the token is pasted; secrets use key/_env/_command |
 | `social_posts` record of what was posted | not included | Mimir's own database |
 
+## The post log
+
+Every successful post is recorded in the post log (see [posts](../posts/README.md)),
+and `linkedin` refuses to publish the same text to the same account twice within 30 days.
+`--allow-duplicate` overrides that and `--no-log` skips the record. A `--dry-run`
+never records, and only warns about a repeat. If the log cannot be written, the post
+still goes out and stderr says so.
+
 ## Not verified
 
 Everything here is tested against a **fake LinkedIn server** that asserts the

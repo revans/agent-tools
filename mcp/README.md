@@ -72,7 +72,7 @@ That one command:
 Check it:
 
 ```bash
-agent-tools-mcp -list          # the tools it will serve (52; 58 with -allow destructive)
+agent-tools-mcp -list          # the tools it will serve (64; 70 with -allow destructive)
 claude mcp list                # agent-tools: ... ✔ Connected
 codex mcp list                 # agent-tools ... enabled
 grok mcp list                  # agent-tools: ...
@@ -182,7 +182,7 @@ Tips:
 
 ## Tool reference
 
-52 tools are on by default, and 58 with `-allow destructive`. **Read** tools
+64 tools are on by default, and 70 with `-allow destructive`. **Read** tools
 change nothing. **Write** tools change something reversible or additive.
 **Destructive** tools do something public or permanent that cannot be undone:
 the six that publish to X, LinkedIn and Instagram. They are **off by default**.
@@ -226,6 +226,10 @@ and a post.
 | | `linkedin_read`, `linkedin_endpoints` | read | Call any read-only endpoint by name; list endpoints |
 | Instagram | `instagram_post`, `instagram_comment`, `instagram_reply` | **destructive** | Publish an image post, a comment, or a reply. Public and permanent |
 | | `instagram_read`, `instagram_endpoints` | read | Call any read-only endpoint by name; list endpoints |
+| Post log | `posts_list`, `posts_show`, `posts_find`, `posts_report`, `posts_where` | read | What the publishing tools have published, searched, and summarised with metrics |
+| | `posts_add`, `posts_metrics`, `posts_refresh` | write | Record a post made elsewhere, store a metrics reading, or read fresh metrics. They write to the log and never publish |
+| Images | `media_profiles`, `media_info`, `media_check` | read | The platforms known, what an image is, and whether it fits a platform |
+| | `media_fit` | write | Write a new copy of an image that satisfies a platform (never overwrites) |
 | docli | `docli_token_check`, `docli_sizes`, `docli_regions`, `docli_images` | read | Account and catalog |
 | | `docli_droplet_list`, `docli_droplet_get`, `docli_vpc_list`, `docli_firewall_list`, `docli_ssh_key_list`, `docli_db_list`, `docli_domain_list`, `docli_dns_list` | read | Inventory |
 | | `docli_plan` | read | What `apply` would change and cost. Exit code 2 ("there are changes") is a normal result |

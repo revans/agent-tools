@@ -142,6 +142,14 @@ comment and reply only, code 10 (the token lacks a permission: names the scopes)
 | Live human confirmation before each call, activity log of posts | **not included** | The CLI has `--dry-run`; the MCP tools are marked `destructive` so the server can require confirmation. No post log is kept |
 | Optional `media_description`, `original_comment_*` shown in the confirmation | **not included** | Belongs to Mimir's confirmation UI |
 
+## The post log
+
+Every successful post, comment and reply is recorded in the post log (see [posts](../posts/README.md)),
+and `instagram` refuses to publish the same text to the same account twice within 30 days.
+`--allow-duplicate` overrides that and `--no-log` skips the record. A `--dry-run`
+never records, and only warns about a repeat. If the log cannot be written, the post
+still goes out and stderr says so.
+
 ## Not verified
 
 **Nothing here has run against the live Instagram API.** There were no credentials.
