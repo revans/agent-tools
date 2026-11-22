@@ -1,0 +1,160 @@
+# Reddit endpoints. Add your own in ~/.config/reddit/endpoints.d/*.toml,
+# in the same format, and `reddit call NAME` runs them. Base URL: oauth.reddit.com.
+#
+# search, subreddit_search and post_comments mirror what Mimir does and were
+# written from Mimir's live-verified client. subreddit_listing and
+# subreddit_about are extras written from Reddit's public API documentation and
+# have not been run against the live API.
+
+[[endpoint]]
+name = "search"
+description = "Search all of Reddit by keyword. One page of posts, NSFW included (the `search` command filters it)."
+method = "GET"
+path = "/search"
+safety = "read"
+select = "data.children[*].data"
+fields = ["id", "title", "subreddit", "author", "score", "num_comments", "permalink", "created_utc", "over_18", "url"]
+  [endpoint.fixed]
+  raw_json = "1"
+  [endpoint.paginate]
+  cursor_path = "data.after"
+  cursor_param = "after"
+  [[endpoint.param]]
+  name = "q"
+  required = true
+  description = "Keyword or topic to search for."
+  [[endpoint.param]]
+  name = "sort"
+  default = "relevance"
+  enum = ["relevance", "hot", "top", "new", "comments"]
+  description = "Result order."
+  [[endpoint.param]]
+  name = "t"
+  enum = ["hour", "day", "week", "month", "year", "all"]
+  description = "Time window, for sort=top or sort=comments."
+  [[endpoint.param]]
+  name = "limit"
+  type = "integer"
+  default = "10"
+  description = "Posts per page, 1 to 100."
+  [[endpoint.param]]
+  name = "after"
+  description = "Cursor from the previous page."
+
+[[endpoint]]
+name = "subreddit_search"
+description = "Search inside one subreddit by keyword. One page of posts."
+method = "GET"
+path = "/r/{subreddit}/search"
+safety = "read"
+select = "data.children[*].data"
+fields = ["id", "title", "subreddit", "author", "score", "num_comments", "permalink", "created_utc", "over_18", "url"]
+  [endpoint.fixed]
+  raw_json = "1"
+  restrict_sr = "true"
+  [endpoint.paginate]
+  cursor_path = "data.after"
+  cursor_param = "after"
+  [[endpoint.param]]
+  name = "subreddit"
+  in = "path"
+  required = true
+  description = "Subreddit name without the r/ prefix."
+  [[endpoint.param]]
+  name = "q"
+  required = true
+  description = "Keyword or topic to search for."
+  [[endpoint.param]]
+  name = "sort"
+  default = "relevance"
+  enum = ["relevance", "hot", "top", "new", "comments"]
+  description = "Result order."
+  [[endpoint.param]]
+  name = "t"
+  enum = ["hour", "day", "week", "month", "year", "all"]
+  description = "Time window, for sort=top or sort=comments."
+  [[endpoint.param]]
+  name = "limit"
+  type = "integer"
+  default = "10"
+  description = "Posts per page, 1 to 100."
+  [[endpoint.param]]
+  name = "after"
+  description = "Cursor from the previous page."
+
+[[endpoint]]
+name = "post_comments"
+description = "One post and its comments. The answer is a two-element array: the post listing, then the comment listing."
+method = "GET"
+path = "/comments/{id}"
+safety = "read"
+  [endpoint.fixed]
+  raw_json = "1"
+  [[endpoint.param]]
+  name = "id"
+  in = "path"
+  required = true
+  description = "Post id (base36, e.g. 1abc2d)."
+  [[endpoint.param]]
+  name = "sort"
+  default = "top"
+  enum = ["confidence", "top", "new", "controversial", "old", "qa"]
+  description = "Comment order."
+  [[endpoint.param]]
+  name = "limit"
+  type = "integer"
+  default = "100"
+  description = "Maximum comments."
+
+[[endpoint]]
+name = "subreddit_listing"
+description = "Posts in a subreddit by hot, new, top or rising."
+method = "GET"
+path = "/r/{subreddit}/{listing}"
+safety = "read"
+select = "data.children[*].data"
+fields = ["id", "title", "author", "score", "num_comments", "permalink", "created_utc", "over_18", "url"]
+  [endpoint.fixed]
+  raw_json = "1"
+  [endpoint.paginate]
+  cursor_path = "data.after"
+  cursor_param = "after"
+  [[endpoint.param]]
+  name = "subreddit"
+  in = "path"
+  required = true
+  description = "Subreddit name without the r/ prefix."
+  [[endpoint.param]]
+  name = "listing"
+  in = "path"
+  required = true
+  enum = ["hot", "new", "top", "rising"]
+  description = "Which listing."
+  [[endpoint.param]]
+  name = "t"
+  enum = ["hour", "day", "week", "month", "year", "all"]
+  description = "Time window, for the top listing."
+  [[endpoint.param]]
+  name = "limit"
+  type = "integer"
+  default = "25"
+  description = "Posts per page, 1 to 100."
+  [[endpoint.param]]
+  name = "after"
+  description = "Cursor from the previous page."
+
+[[endpoint]]
+name = "subreddit_about"
+description = "A subreddit's title, description and subscriber count."
+method = "GET"
+path = "/r/{subreddit}/about"
+safety = "read"
+select = "data"
+fields = ["display_name", "title", "public_description", "subscribers", "over18", "created_utc"]
+  [endpoint.fixed]
+  raw_json = "1"
+  [[endpoint.param]]
+  name = "subreddit"
+  in = "path"
+  required = true
+  description = "Subreddit name without the r/ prefix."
