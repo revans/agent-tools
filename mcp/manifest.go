@@ -15,7 +15,7 @@ import (
 	"github.com/pelletier/go-toml/v2"
 )
 
-//go:embed tools/*.toml
+//go:embed manifests/*.toml
 var builtinTools embed.FS
 
 // Safety levels, lowest to highest. A server started with -allow=write
@@ -154,12 +154,12 @@ func loadTools(extraDirs []string) ([]Tool, error) {
 		all = append(all, ts...)
 		return nil
 	}
-	entries, err := fs.ReadDir(builtinTools, "tools")
+	entries, err := fs.ReadDir(builtinTools, "manifests")
 	if err != nil {
 		return nil, err
 	}
 	for _, e := range entries {
-		data, err := builtinTools.ReadFile("tools/" + e.Name())
+		data, err := builtinTools.ReadFile("manifests/" + e.Name())
 		if err != nil {
 			return nil, err
 		}

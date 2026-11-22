@@ -3,7 +3,7 @@
 
 [workspace]
 resolver = "3"
-members = ["notif-slack", "notif-tg"]
+members = ["tools/notif-slack", "tools/notif-tg"]
 
 [workspace.package]
 version = "0.1.0"

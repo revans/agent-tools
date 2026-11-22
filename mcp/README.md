@@ -87,10 +87,10 @@ Do it once, in a terminal, the same way you would without the server.
 
 | Tools | Set up | Details |
 | --- | --- | --- |
-| `slack_*` | `notif-slack init`, then add a bot token to `~/.config/notif-slack/config.toml`; check with `notif-slack check` | [notif-slack/README.md](../notif-slack/README.md) |
-| `tg_*` | `notif-tg init`, add a BotFather token; check with `notif-tg check` | [notif-tg/README.md](../notif-tg/README.md) |
-| `wharf_*` | a `.wharf` file at the root of your site repo | [wharf/README.md](../wharf/README.md) |
-| `docli_*` | `DIGITALOCEAN_TOKEN`, or a token in `~/.config/docli/token` (mode 0600) | `docli help` |
+| `slack_*` | `notif-slack init`, then add a bot token to `~/.config/notif-slack/config.toml`; check with `notif-slack check` | [notif-slack/README.md](../tools/notif-slack/README.md) |
+| `tg_*` | `notif-tg init`, add a BotFather token; check with `notif-tg check` | [notif-tg/README.md](../tools/notif-tg/README.md) |
+| `wharf_*` | a `.wharf` file at the root of your site repo | [wharf/README.md](../tools/wharf/README.md) |
+| `docli_*` | `DIGITALOCEAN_TOKEN`, or a token in `~/.config/docli/token` (mode 0600) | [docli/README.md](../tools/docli/README.md) |
 
 Two of those are per project: **wharf** reads `.wharf` and **docli plan** reads
 its stack file from the directory you launch the assistant in. Start your
@@ -259,7 +259,7 @@ Rules: tool names are unique (a duplicate is an error, never an override);
 decide when to call; flags must be long (`--like-this`); `enum = [...]` limits a
 string. Only wrap commands that cannot prompt, and only pass `--yes` when the
 command is safe to run unattended. The built-in set lives in
-[`tools/`](tools/) and is a good template.
+[`manifests/`](manifests/) and is a good template.
 
 ## Remote access: HTTP and OAuth
 

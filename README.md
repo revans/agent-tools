@@ -7,7 +7,9 @@ Claude Code skill that teaches an agent to drive it.
   CLIs that share a design: write a Markdown template, name an account and a
   destination, send.
 - **`wharf`**: SFTP deployment for static sites: explore, sync, move, archive,
-  pull, diff, verify, restore, and (carefully) delete. See [wharf/README.md](wharf/README.md).
+  pull, diff, verify, restore, and (carefully) delete. See [tools/wharf/README.md](tools/wharf/README.md).
+- **`docli`**: manage DigitalOcean droplets, VPCs, firewalls, DNS and databases from
+  the command line, with a plan before every change. See [tools/docli/README.md](tools/docli/README.md).
 
 - **`agent-tools-mcp`**: one MCP server that gives Claude Code, Codex and Grok
   (and, over HTTP with OAuth, claude.ai and ChatGPT web) all of these tools,
@@ -23,9 +25,10 @@ notif-tg     post --account gierd --chat releases --template deploy \
 
 | | | |
 | --- | --- | --- |
-| [`notif-slack`](notif-slack) | Slack | post, read a channel or thread, reply in thread |
-| [`notif-tg`](notif-tg) | Telegram | send, read messages sent to the bot, watch, reply |
-| [`wharf`](wharf) | SFTP | explore, sync, deploy, move, archive, pull, diff, verify, restore, prune, delete |
+| [`notif-slack`](tools/notif-slack) | Slack | post, read a channel or thread, reply in thread |
+| [`notif-tg`](tools/notif-tg) | Telegram | send, read messages sent to the bot, watch, reply |
+| [`wharf`](tools/wharf) | SFTP | explore, sync, deploy, move, archive, pull, diff, verify, restore, prune, delete |
+| [`docli`](tools/docli) | DigitalOcean | droplets, VPCs, firewalls, DNS, databases; plan, apply |
 
 Each keeps its own external TOML file holding every account, every destination
 and every credential, so nothing is hard-coded and no token is ever passed on
@@ -60,8 +63,8 @@ notif-slack check  # verify the credentials
 notif-tg     check
 ```
 
-Then see [notif-slack/README.md](notif-slack/README.md) and
-[notif-tg/README.md](notif-tg/README.md) for configuration, templates, reading
+Then see [tools/notif-slack/README.md](tools/notif-slack/README.md) and
+[tools/notif-tg/README.md](tools/notif-tg/README.md) for configuration, templates, reading
 and the full command list.
 
 ## Layout
