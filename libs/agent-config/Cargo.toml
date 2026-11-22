@@ -1,0 +1,11 @@
+[package]
+name = "agent-config"
+version.workspace = true
+edition.workspace = true
+description = "Finds a tool's settings in the shared agent-tools config file, or in the tool's own file"
+
+[dependencies]
+anyhow.workspace = true
+dirs.workspace = true
+serde.workspace = true
+toml.workspace = true

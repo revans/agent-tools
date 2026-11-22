@@ -3,13 +3,14 @@
 
 [workspace]
 resolver = "3"
-members = ["tools/notif-slack", "tools/notif-tg"]
+members = ["libs/agent-config", "tools/notif-slack", "tools/notif-tg"]
 
 [workspace.package]
 version = "0.1.0"
 edition = "2024"
 
 [workspace.dependencies]
+agent-config = { path = "libs/agent-config" }
 anyhow = "1.0.104"
 clap = { version = "4.6.7", features = ["derive"] }
 dirs = "7.0.0"
