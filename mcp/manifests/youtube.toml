@@ -1,0 +1,63 @@
+# YouTube tools (the youtube CLI, built on apikit). Credentials live in the
+# [youtube] table of ~/.config/agent-tools/config.toml. youtube_read runs any
+# read-only endpoint by name, so an endpoint added in endpoints.d works with no
+# change here. Everything here is read-only.
+
+[[tool]]
+name = "youtube_search"
+description = "Search YouTube for videos by plain-text query. Returns up to 10 results (title, channel, URL, description snippet, published date) and whether more exist. Videos only, no channel or playlist search. No view counts or transcripts. Uses the daily YouTube API quota (100 units per search)."
+bin = "youtube"
+args = ["search"]
+safety = "read"
+  [[tool.param]]
+  name = "query"
+  type = "string"
+  flag = "--query"
+  required = true
+  description = "Plain-text query to search YouTube for."
+  [[tool.param]]
+  name = "account"
+  type = "string"
+  flag = "--account"
+  description = "Account name from the youtube config. Optional when there is one account or a default."
+
+[[tool]]
+name = "youtube_read"
+description = "Call any read-only YouTube Data API endpoint by name and return its JSON. Use youtube_endpoints first to see the names and parameters. Beyond search it offers videos (details, view counts, duration by video id) and channels; those two are not from Mimir and are unverified against the live API."
+bin = "youtube"
+args = ["call", "--max-safety=read"]
+safety = "read"
+timeout = "90s"
+  [[tool.param]]
+  name = "endpoint"
+  type = "string"
+  positional = true
+  required = true
+  description = "Endpoint name, e.g. videos."
+  [[tool.param]]
+  name = "params"
+  type = "map"
+  flag = "--param"
+  description = "The endpoint's parameters as an object of strings, e.g. {\"id\": \"dQw4w9WgXcQ\"}."
+  [[tool.param]]
+  name = "pages"
+  type = "integer"
+  flag = "--pages"
+  description = "For endpoints that paginate: follow the cursor for up to this many pages (each page costs quota)."
+  [[tool.param]]
+  name = "account"
+  type = "string"
+  flag = "--account"
+  description = "Account name from the youtube config."
+
+[[tool]]
+name = "youtube_endpoints"
+description = "List the YouTube API endpoints available to youtube_read, or describe one in detail (parameters, types, which are required)."
+bin = "youtube"
+args = ["endpoints"]
+safety = "read"
+  [[tool.param]]
+  name = "endpoint"
+  type = "string"
+  positional = true
+  description = "Describe this one endpoint. Omit to list all."

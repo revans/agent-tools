@@ -1,0 +1,74 @@
+# YouTube Data API v3 endpoints. Add your own in ~/.config/agent-tools/youtube/endpoints.d/*.toml,
+# in the same format, and `youtube call NAME` runs them. Base URL: www.googleapis.com/youtube/v3.
+# The API key is sent in the X-Goog-Api-Key header, never in the URL.
+#
+# `search` mirrors what Mimir does and was written from Mimir's client, whose
+# request shape its author says was verified live.
+# `videos` and `channels` are NOT from Mimir: written from YouTube's public API
+# documentation, unverified (never run against the live API).
+# Quota: every project has a daily quota. search.list costs 100 units per call;
+# videos.list and channels.list cost 1.
+
+[[endpoint]]
+name = "search"
+description = "Search YouTube for videos by keyword (search.list, type=video; 100 quota units per call). Each result: video_id, title, channel, description, published_at."
+method = "GET"
+path = "/search"
+safety = "read"
+select = "items[*]"
+fields = ["kind:id.kind", "video_id:id.videoId", "title:snippet.title", "channel:snippet.channelTitle", "description:snippet.description", "published_at:snippet.publishedAt"]
+  [endpoint.fixed]
+  part = "snippet"
+  type = "video"
+  [endpoint.paginate]
+  cursor_path = "nextPageToken"
+  cursor_param = "page_token"
+  [[endpoint.param]]
+  name = "q"
+  required = true
+  description = "Plain-text query."
+  [[endpoint.param]]
+  name = "max_results"
+  wire = "maxResults"
+  type = "integer"
+  default = "10"
+  description = "Results per page (search.list allows 0 to 50)."
+  [[endpoint.param]]
+  name = "page_token"
+  wire = "pageToken"
+  description = "Token for a later page (from nextPageToken). `--pages` sets it for you."
+
+[[endpoint]]
+name = "videos"
+description = "NOT from Mimir; from YouTube's public docs, unverified. Details of videos by id (videos.list): snippet, statistics (views, likes) and contentDetails (duration). 1 quota unit."
+method = "GET"
+path = "/videos"
+safety = "read"
+select = "items"
+  [[endpoint.param]]
+  name = "id"
+  required = true
+  description = "Video id, or several separated by commas (up to 50)."
+  [[endpoint.param]]
+  name = "part"
+  default = "snippet,statistics,contentDetails"
+  description = "Parts of the video resource to return."
+
+[[endpoint]]
+name = "channels"
+description = "NOT from Mimir; from YouTube's public docs, unverified. Details of channels (channels.list) by channel id or by handle. 1 quota unit."
+method = "GET"
+path = "/channels"
+safety = "read"
+select = "items"
+  [[endpoint.param]]
+  name = "id"
+  description = "Channel id, or several separated by commas. Give this or for_handle."
+  [[endpoint.param]]
+  name = "for_handle"
+  wire = "forHandle"
+  description = "A channel handle such as @GoogleDevelopers. Give this or id."
+  [[endpoint.param]]
+  name = "part"
+  default = "snippet,statistics"
+  description = "Parts of the channel resource to return."
