@@ -72,7 +72,7 @@ That one command:
 Check it:
 
 ```bash
-agent-tools-mcp -list          # the tools it will serve (74; 81 with -allow destructive)
+agent-tools-mcp -list          # the tools it will serve (78; 88 with -allow destructive)
 claude mcp list                # agent-tools: ... ✔ Connected
 codex mcp list                 # agent-tools ... enabled
 grok mcp list                  # agent-tools: ...
@@ -101,6 +101,7 @@ in with `notif-slack migrate` and `notif-tg migrate`.
 | `x_*` | `x init`, then add the four OAuth 1.0a keys from the X developer portal; check with `x check` | [x/README.md](../tools/x/README.md) |
 | `linkedin_*` | `linkedin init`, then paste an access token (about 60 days; no login flow yet); check with `linkedin check` | [linkedin/README.md](../tools/linkedin/README.md) |
 | `instagram_*` | `instagram init`, then paste a long-lived token (about 60 days; no login flow yet); check with `instagram check` | [instagram/README.md](../tools/instagram/README.md) |
+| `facebook_*` | `facebook init`, then add a Page access token and `page_id` (Pages only; see its README); check with `facebook check` | [facebook/README.md](../tools/facebook/README.md) |
 | `cloudflare_*` | `cloudflare init`, then add a scoped API token (and `account_id` for tunnels and Pages); check with `cloudflare check` | [cloudflare/README.md](../tools/cloudflare/README.md) |
 | `docli_*` | `DIGITALOCEAN_TOKEN`, or a token in `~/.config/docli/token` (mode 0600) | [docli/README.md](../tools/docli/README.md) |
 
@@ -183,10 +184,10 @@ Tips:
 
 ## Tool reference
 
-74 tools are on by default, and 81 with `-allow destructive`. **Read** tools
+78 tools are on by default, and 88 with `-allow destructive`. **Read** tools
 change nothing. **Write** tools change something reversible or additive.
 **Destructive** tools do something public or permanent that cannot be undone:
-the six that publish to X, LinkedIn and Instagram, and `cloudflare_dns_delete`,
+the nine that publish to X, LinkedIn, Instagram and Facebook, and `cloudflare_dns_delete`,
 which removes a public DNS record. They are **off by default**.
 The server does not register them, so an assistant cannot see them, until you
 start it with `-allow destructive`:
@@ -233,6 +234,9 @@ and a post.
 | | `posts_add`, `posts_metrics`, `posts_refresh` | write | Record a post made elsewhere, store a metrics reading, or read fresh metrics. They write to the log and never publish |
 | Images | `media_profiles`, `media_info`, `media_check` | read | The platforms known, what an image is, and whether it fits a platform |
 | | `media_fit` | write | Write a new copy of an image that satisfies a platform (never overwrites) |
+| Facebook (Pages) | `facebook_posts`, `facebook_metrics` | read | A Page's published posts; a post's reactions, comments, shares and (with permission) views and reach |
+| | `facebook_read`, `facebook_endpoints` | read | Call any read-only endpoint by name; list endpoints |
+| | `facebook_post`, `facebook_photo`, `facebook_comment` | **destructive** | Publish a Page post, a photo, or a comment. Public and permanent |
 | Cloudflare | `cloudflare_zones`, `cloudflare_dns_list`, `cloudflare_tunnels`, `cloudflare_check` | read | Your zones, a zone's DNS records (by domain name), tunnels, and the token's validity |
 | | `cloudflare_read`, `cloudflare_endpoints` | read | Call any read-only Cloudflare endpoint by name; list endpoints |
 | | `cloudflare_dns_add`, `cloudflare_dns_update`, `cloudflare_purge` | write | Create or change a DNS record; purge the cache. They change a live site |
@@ -431,7 +435,7 @@ Decisions you should know about:
 | `no config file found (looked at ./agent-tools.toml, ~/.config/agent-tools/config.toml, ...)` | Run `notif-slack init` (or the tool's own `init`) and add a token. See [credentials](#set-up-the-tools-credentials). |
 | A token works in your shell but not through the assistant | The assistant filtered the environment. Put the credential in the CLI's config file, or pass it with `--env`. |
 | `docli_plan` reports a result with "exit code 2" | Not an error: it means the plan has changes. |
-| `x_post`, `linkedin_post`, an `instagram_*` publishing tool or `cloudflare_dns_delete` is missing | They are destructive and off by default. Re-register with `make mcp-register MCP_ALLOW=destructive`, or add `-allow destructive` to the server's command. |
+| `x_post`, `linkedin_post`, an `instagram_*` or `facebook_*` publishing tool or `cloudflare_dns_delete` is missing | They are destructive and off by default. Re-register with `make mcp-register MCP_ALLOW=destructive`, or add `-allow destructive` to the server's command. |
 | A tool you added does not appear | `agent-tools-mcp -list`. Check its `safety` is at or below `-allow`, then restart the assistant (tool lists are read at start). |
 | `grok`: "Not signed in" | `grok login` (or `--device-code`). |
 | Codex shows the call as "(failed)" | The CLI returned an error. The text of the error is in the result; it is not a connection fault. |

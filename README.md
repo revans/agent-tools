@@ -17,6 +17,9 @@ Claude Code skill that teaches an agent to drive it.
   [tools/x](tools/x/README.md), [tools/youtube](tools/youtube/README.md),
   [tools/linkedin](tools/linkedin/README.md) and
   [tools/instagram](tools/instagram/README.md).
+- **`facebook`**: publish to a Facebook **Page** (post, photo, comment), list its posts
+  and read their numbers. Pages only: Meta deprecated the Groups API and offers no
+  personal-profile posting. See [tools/facebook](tools/facebook/README.md).
 - **`cloudflare`**: zones, DNS records (by domain name), cache purge, tunnels and
   Pages, on `apikit`, so any other endpoint is a few lines of TOML. Deleting a record
   needs an explicit `--max-safety destructive`. See
@@ -48,6 +51,7 @@ notif-tg     post --account gierd --chat releases --template deploy \
 | [`wharf`](tools/wharf) | SFTP | explore, sync, deploy, move, archive, pull, diff, verify, restore, prune, delete |
 | [`docli`](tools/docli) | DigitalOcean | droplets, VPCs, firewalls, DNS, databases; plan, apply |
 | [`reddit`](tools/reddit) | Reddit | search, fetch a post with comments, any endpoint |
+| [`facebook`](tools/facebook) | Facebook Pages | post, photo, comment, list posts, metrics |
 | [`cloudflare`](tools/cloudflare) | Cloudflare | zones, DNS records, cache purge, tunnels, Pages |
 | [`posts`](tools/posts) | the post log | list, find, report, store and refresh metrics |
 | [`media`](tools/media) | images | check and fit an image to Instagram, X or LinkedIn |
