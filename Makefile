@@ -67,8 +67,9 @@ $(addprefix install-,$(GO_TOOLS)): install-%: %
 $(addprefix uninstall-,$(GO_TOOLS)): uninstall-%:
 	@rm -f "$(PREFIX)/bin/$*"
 
-test-libs: ## Vet and test the shared Go libraries (libs/)
+test-libs: ## Vet and test the shared Go libraries (libs/; Rust crates there are covered by cargo test)
 	@for d in $(LIBS)/*/; do \
+		[ -f "$$d/go.mod" ] || continue; \
 		echo "testing $$d"; \
 		(cd "$$d" && $(GO) vet ./... && $(GO) test ./...) || exit 1; \
 	done
