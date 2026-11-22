@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/revans/agent-tools/apikit"
+	"github.com/revans/agent-tools/postlog"
 )
 
 const secretToken = "IGQ-SECRET-TOKEN"
@@ -186,6 +187,7 @@ func fakeSleep(t *testing.T) *[]time.Duration {
 
 func setup(t *testing.T, f *fakeIG, extra string) func(args ...string) (int, string, string) {
 	t.Helper()
+	t.Setenv(postlog.EnvPath, filepath.Join(t.TempDir(), "posts.jsonl")) // never the real log
 	cfg := filepath.Join(t.TempDir(), "instagram.toml")
 	body := fmt.Sprintf("default='main'\n[accounts.main]\naccess_token=%q\nbase_url=%q\n%s", secretToken, f.srv.URL, extra)
 	if err := os.WriteFile(cfg, []byte(body), 0o600); err != nil {

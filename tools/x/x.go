@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/revans/agent-tools/apikit"
+	"github.com/revans/agent-tools/postlog"
 )
 
 // These are the same limits and rules Mimir applies.
@@ -536,7 +537,7 @@ func loadImage(cmd, path string) (*image, error) {
 // publish uploads the image (if any) and creates the post. replyTo is empty for
 // a plain post. With --dry-run it prints both requests and sends neither; the
 // image bytes are summarised, never printed.
-func publish(r *apikit.Run, st *settings, cmd, text, replyTo, imagePath string) (any, error) {
+func publish(r *apikit.Run, st *settings, lo postlog.Options, cmd, text, replyTo, imagePath string) (any, error) {
 	if strings.TrimSpace(text) == "" {
 		return nil, apikit.Usage("--text is required and must not be empty")
 	}
@@ -549,6 +550,13 @@ func publish(r *apikit.Run, st *settings, cmd, text, replyTo, imagePath string) 
 	}
 	c, err := r.Client()
 	if err != nil {
+		return nil, err
+	}
+	entry := postlog.Entry{Platform: "x", Account: st.account, Kind: cmd, Text: text, Target: replyTo, Source: "x " + cmd}
+	if imagePath != "" {
+		entry.Media = []string{imagePath}
+	}
+	if err := lo.Before(entry, r.DryRun(), r.Stderr); err != nil {
 		return nil, err
 	}
 	params := map[string]string{"text": text}
@@ -606,8 +614,11 @@ func publish(r *apikit.Run, st *settings, cmd, text, replyTo, imagePath string) 
 	if posted == "" {
 		posted = text
 	}
+	entry.RemoteID, entry.Text = str(data, "id"), posted
+	entry.URL = "https://x.com/i/status/" + entry.RemoteID
+	lo.After(entry, r.Stderr)
 	return map[string]any{
-		"id":             str(data, "id"),
+		"id":             entry.RemoteID,
 		"text":           posted,
 		"image_attached": img != nil,
 		"account":        st.account,
@@ -616,6 +627,7 @@ func publish(r *apikit.Run, st *settings, cmd, text, replyTo, imagePath string) 
 
 func postCommand(st *settings) *apikit.Command {
 	var text, img string
+	var lo postlog.Options
 	return &apikit.Command{
 		Name:    "post",
 		Summary: "PUBLISH a new post, optionally with one image (cannot be undone)",
@@ -623,13 +635,15 @@ func postCommand(st *settings) *apikit.Command {
 		Setup: func(fs *flag.FlagSet) {
 			fs.StringVar(&text, "text", "", "the exact post text (required)")
 			fs.StringVar(&img, "image", "", "absolute path to a png, jpg, jpeg, gif or webp (at most 5 MiB)")
+			lo.Flags(fs)
 		},
-		Run: func(r *apikit.Run) (any, error) { return publish(r, st, "post", text, "", img) },
+		Run: func(r *apikit.Run) (any, error) { return publish(r, st, lo, "post", text, "", img) },
 	}
 }
 
 func replyCommand(st *settings) *apikit.Command {
 	var text, img string
+	var lo postlog.Options
 	return &apikit.Command{
 		Name:    "reply",
 		Summary: "PUBLISH a reply to a post, optionally with one image (cannot be undone)",
@@ -637,6 +651,7 @@ func replyCommand(st *settings) *apikit.Command {
 		Setup: func(fs *flag.FlagSet) {
 			fs.StringVar(&text, "text", "", "the exact reply text (required)")
 			fs.StringVar(&img, "image", "", "absolute path to a png, jpg, jpeg, gif or webp (at most 5 MiB)")
+			lo.Flags(fs)
 		},
 		Run: func(r *apikit.Run) (any, error) {
 			if len(r.Args) != 1 {
@@ -649,7 +664,7 @@ func replyCommand(st *settings) *apikit.Command {
 			if err := validateTweetID(id); err != nil {
 				return nil, err
 			}
-			return publish(r, st, "reply", text, id, img)
+			return publish(r, st, lo, "reply", text, id, img)
 		},
 	}
 }

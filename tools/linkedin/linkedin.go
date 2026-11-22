@@ -13,6 +13,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/revans/agent-tools/apikit"
+	"github.com/revans/agent-tools/postlog"
 )
 
 // These limits are the same ones Mimir applies.
@@ -105,6 +106,7 @@ func wrapAPIError(err error) error {
 
 func (t *tool) postCommand() *apikit.Command {
 	var text, image string
+	var lo postlog.Options
 	return &apikit.Command{
 		Name:    "post",
 		Summary: "publish a post, with an optional image, PUBLICLY to LinkedIn",
@@ -112,6 +114,7 @@ func (t *tool) postCommand() *apikit.Command {
 		Setup: func(fs *flag.FlagSet) {
 			fs.StringVar(&text, "text", "", "the post text, at most 3000 characters (required)")
 			fs.StringVar(&image, "image", "", "a JPEG, GIF or PNG file to attach (at most 8 MB)")
+			lo.Flags(fs)
 		},
 		Run: func(r *apikit.Run) (any, error) {
 			if err := validateCommentary(text); err != nil {
@@ -124,7 +127,26 @@ func (t *tool) postCommand() *apikit.Command {
 					return nil, err
 				}
 			}
+			if _, err := r.Client(); err != nil { // loads the config: the account name and author
+				return nil, err
+			}
+			entry := postlog.Entry{Platform: "linkedin", Account: r.AccountName(), Kind: "post", Text: text, Source: "linkedin post"}
+			if image != "" {
+				entry.Media = []string{image}
+			}
+			if err := lo.Before(entry, r.DryRun(), r.Stderr); err != nil {
+				return nil, err
+			}
 			out, err := t.publish(r, text, image, size)
+			if err == nil && !r.DryRun() {
+				if m, ok := out.(map[string]any); ok {
+					if id, _ := m["id"].(string); id != "" {
+						entry.RemoteID = id
+						entry.URL = "https://www.linkedin.com/feed/update/" + id + "/"
+						lo.After(entry, r.Stderr)
+					}
+				}
+			}
 			return out, wrapAPIError(err)
 		},
 	}

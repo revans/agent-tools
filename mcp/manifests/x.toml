@@ -121,6 +121,11 @@ timeout = "120s"
   type = "string"
   flag = "--account"
   description = "Account name from the x config. Optional when there is one account or a default."
+  [[tool.param]]
+  name = "allow_duplicate"
+  type = "boolean"
+  flag = "--allow-duplicate"
+  description = "Publish even though this exact text was already published to this account in the last 30 days. Set it only when the user has asked for the repeat."
 
 [[tool]]
 name = "x_reply"
@@ -156,6 +161,11 @@ timeout = "120s"
   type = "string"
   flag = "--account"
   description = "Account name from the x config. Optional when there is one account or a default."
+  [[tool.param]]
+  name = "allow_duplicate"
+  type = "boolean"
+  flag = "--allow-duplicate"
+  description = "Publish even though this exact text was already published to this account in the last 30 days. Set it only when the user has asked for the repeat."
 
 [[tool]]
 name = "x_read"

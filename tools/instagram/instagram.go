@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/revans/agent-tools/apikit"
+	"github.com/revans/agent-tools/postlog"
 )
 
 // The same limits Mimir applies.
@@ -173,6 +174,7 @@ func userID(r *apikit.Run) (string, error) {
 
 func postCommand() *apikit.Command {
 	var caption, imageURL string
+	var lo postlog.Options
 	return &apikit.Command{
 		Name:    "post",
 		Summary: "publish a photo with a caption (public; cannot be undone)",
@@ -180,6 +182,7 @@ func postCommand() *apikit.Command {
 		Setup: func(fs *flag.FlagSet) {
 			fs.StringVar(&caption, "caption", "", "caption, up to 2200 characters (required)")
 			fs.StringVar(&imageURL, "image-url", "", "public URL of a JPEG image (required)")
+			lo.Flags(fs)
 		},
 		Run: func(r *apikit.Run) (any, error) {
 			if err := validateCaption(caption); err != nil {
@@ -187,6 +190,13 @@ func postCommand() *apikit.Command {
 			}
 			img, err := validateImageURL(imageURL)
 			if err != nil {
+				return nil, err
+			}
+			if _, err := r.Client(); err != nil { // loads the config: the account name. No network yet
+				return nil, err
+			}
+			entry := postlog.Entry{Platform: "instagram", Account: r.AccountName(), Kind: "post", Text: caption, Media: []string{img}, Source: "instagram post"}
+			if err := lo.Before(entry, r.DryRun(), r.Stderr); err != nil {
 				return nil, err
 			}
 			uid, err := userID(r)
@@ -218,6 +228,8 @@ func postCommand() *apikit.Command {
 			if err != nil {
 				return nil, err
 			}
+			entry.RemoteID = mediaID
+			lo.After(entry, r.Stderr)
 			return map[string]any{"id": mediaID, "container_id": containerID, "account": r.AccountName()}, nil
 		},
 	}
@@ -276,6 +288,7 @@ func tryPublish(r *apikit.Run, uid, containerID string) (string, error) {
 
 func commentCommand() *apikit.Command {
 	var mediaID, message string
+	var lo postlog.Options
 	return &apikit.Command{
 		Name:    "comment",
 		Summary: "post a public comment on one of your media (cannot be undone)",
@@ -283,6 +296,7 @@ func commentCommand() *apikit.Command {
 		Setup: func(fs *flag.FlagSet) {
 			fs.StringVar(&mediaID, "media-id", "", "numeric id of the media (required)")
 			fs.StringVar(&message, "message", "", "comment text, up to 2200 characters (required)")
+			lo.Flags(fs)
 		},
 		Run: func(r *apikit.Run) (any, error) {
 			id, err := validateObjectID("--media-id", mediaID)
@@ -292,13 +306,14 @@ func commentCommand() *apikit.Command {
 			if err := validateMessage("comment", message); err != nil {
 				return nil, err
 			}
-			return sendText(r, "comment_create", "media_id", id, message)
+			return publishText(r, lo, "comment", "comment_create", "media_id", id, message)
 		},
 	}
 }
 
 func replyCommand() *apikit.Command {
 	var commentID, message string
+	var lo postlog.Options
 	return &apikit.Command{
 		Name:    "reply",
 		Summary: "post a public reply to a comment (cannot be undone)",
@@ -306,6 +321,7 @@ func replyCommand() *apikit.Command {
 		Setup: func(fs *flag.FlagSet) {
 			fs.StringVar(&commentID, "comment-id", "", "numeric id of the comment (required)")
 			fs.StringVar(&message, "message", "", "reply text, up to 2200 characters (required)")
+			lo.Flags(fs)
 		},
 		Run: func(r *apikit.Run) (any, error) {
 			id, err := validateObjectID("--comment-id", commentID)
@@ -315,9 +331,29 @@ func replyCommand() *apikit.Command {
 			if err := validateMessage("reply", message); err != nil {
 				return nil, err
 			}
-			return sendText(r, "reply_create", "comment_id", id, message)
+			return publishText(r, lo, "reply", "reply_create", "comment_id", id, message)
 		},
 	}
+}
+
+// publishText sends a comment or a reply, with the repeat check before it and the
+// ledger record after it. kind is "comment" or "reply"; id is what it answers.
+func publishText(r *apikit.Run, lo postlog.Options, kind, endpoint, idParam, id, message string) (any, error) {
+	if _, err := r.Client(); err != nil { // loads the config: the account name
+		return nil, err
+	}
+	entry := postlog.Entry{Platform: "instagram", Account: r.AccountName(), Kind: kind, Target: id, Text: message, Source: "instagram " + kind}
+	if err := lo.Before(entry, r.DryRun(), r.Stderr); err != nil {
+		return nil, err
+	}
+	out, err := sendText(r, endpoint, idParam, id, message)
+	if err == nil && !r.DryRun() {
+		if m, ok := out.(map[string]any); ok {
+			entry.RemoteID, _ = m["id"].(string)
+			lo.After(entry, r.Stderr)
+		}
+	}
+	return out, err
 }
 
 func sendText(r *apikit.Run, endpoint, idParam, id, message string) (any, error) {

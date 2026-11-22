@@ -14,6 +14,7 @@ import (
 	"testing"
 
 	"github.com/revans/agent-tools/apikit"
+	"github.com/revans/agent-tools/postlog"
 )
 
 const goodToken = "TOK123"
@@ -94,6 +95,7 @@ func newFake(t *testing.T) *fakeLinkedIn {
 // setup writes a config for the fake and returns a runner.
 func setup(t *testing.T, f *fakeLinkedIn, extra string) func(args ...string) (int, string, string) {
 	t.Helper()
+	t.Setenv(postlog.EnvPath, filepath.Join(t.TempDir(), "posts.jsonl")) // never the real log
 	cfg := filepath.Join(t.TempDir(), "linkedin.toml")
 	body := fmt.Sprintf("[accounts.main]\naccess_token = %q\nbase_url = %q\n%s", goodToken, f.srv.URL, extra)
 	if err := os.WriteFile(cfg, []byte(body), 0o600); err != nil {

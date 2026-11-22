@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"github.com/revans/agent-tools/apikit"
+	"github.com/revans/agent-tools/postlog"
 )
 
 // The four credentials the tests use. The two secrets must never appear in any
@@ -246,10 +247,11 @@ func newFake(t *testing.T) *fakeX {
 }
 
 type env struct {
-	f     *fakeX
-	t     *testing.T
-	state string
-	cfg   string
+	f      *fakeX
+	t      *testing.T
+	state  string
+	cfg    string
+	ledger string
 }
 
 func setup(t *testing.T, f *fakeX, extra string) *env {
@@ -258,6 +260,9 @@ func setup(t *testing.T, f *fakeX, extra string) *env {
 	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
 	t.Setenv("XDG_STATE_HOME", t.TempDir())
 	e := &env{f: f, t: t, state: t.TempDir(), cfg: filepath.Join(t.TempDir(), "x.toml")}
+	// The post log is never the real one.
+	e.ledger = filepath.Join(e.state, "posts.jsonl")
+	t.Setenv(postlog.EnvPath, e.ledger)
 	body := fmt.Sprintf("default='main'\n[accounts.main]\napi_key=%q\napi_secret=%q\naccess_token=%q\naccess_token_secret=%q\nbase_url=%q\nstate_dir=%q\n%s",
 		apiKey, apiSecret, accessToken, accessSecret, f.srv.URL+"/2", e.state, extra)
 	if err := os.WriteFile(e.cfg, []byte(body), 0o600); err != nil {
