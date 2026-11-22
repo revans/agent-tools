@@ -72,7 +72,7 @@ That one command:
 Check it:
 
 ```bash
-agent-tools-mcp -list          # the tools it will serve (64; 70 with -allow destructive)
+agent-tools-mcp -list          # the tools it will serve (74; 81 with -allow destructive)
 claude mcp list                # agent-tools: ... ✔ Connected
 codex mcp list                 # agent-tools ... enabled
 grok mcp list                  # agent-tools: ...
@@ -101,6 +101,7 @@ in with `notif-slack migrate` and `notif-tg migrate`.
 | `x_*` | `x init`, then add the four OAuth 1.0a keys from the X developer portal; check with `x check` | [x/README.md](../tools/x/README.md) |
 | `linkedin_*` | `linkedin init`, then paste an access token (about 60 days; no login flow yet); check with `linkedin check` | [linkedin/README.md](../tools/linkedin/README.md) |
 | `instagram_*` | `instagram init`, then paste a long-lived token (about 60 days; no login flow yet); check with `instagram check` | [instagram/README.md](../tools/instagram/README.md) |
+| `cloudflare_*` | `cloudflare init`, then add a scoped API token (and `account_id` for tunnels and Pages); check with `cloudflare check` | [cloudflare/README.md](../tools/cloudflare/README.md) |
 | `docli_*` | `DIGITALOCEAN_TOKEN`, or a token in `~/.config/docli/token` (mode 0600) | [docli/README.md](../tools/docli/README.md) |
 
 Two of those are per project: **wharf** reads `.wharf` and **docli plan** reads
@@ -182,10 +183,11 @@ Tips:
 
 ## Tool reference
 
-64 tools are on by default, and 70 with `-allow destructive`. **Read** tools
+74 tools are on by default, and 81 with `-allow destructive`. **Read** tools
 change nothing. **Write** tools change something reversible or additive.
 **Destructive** tools do something public or permanent that cannot be undone:
-the six that publish to X, LinkedIn and Instagram. They are **off by default**.
+the six that publish to X, LinkedIn and Instagram, and `cloudflare_dns_delete`,
+which removes a public DNS record. They are **off by default**.
 The server does not register them, so an assistant cannot see them, until you
 start it with `-allow destructive`:
 
@@ -225,11 +227,16 @@ and a post.
 | LinkedIn | `linkedin_post` | **destructive** | Publish a post with an optional image. Public and permanent |
 | | `linkedin_read`, `linkedin_endpoints` | read | Call any read-only endpoint by name; list endpoints |
 | Instagram | `instagram_post`, `instagram_comment`, `instagram_reply` | **destructive** | Publish an image post, a comment, or a reply. Public and permanent |
+| | `instagram_metrics` | read | One post's likes and comments, and with permission views, reach, saves, shares |
 | | `instagram_read`, `instagram_endpoints` | read | Call any read-only endpoint by name; list endpoints |
 | Post log | `posts_list`, `posts_show`, `posts_find`, `posts_report`, `posts_where` | read | What the publishing tools have published, searched, and summarised with metrics |
 | | `posts_add`, `posts_metrics`, `posts_refresh` | write | Record a post made elsewhere, store a metrics reading, or read fresh metrics. They write to the log and never publish |
 | Images | `media_profiles`, `media_info`, `media_check` | read | The platforms known, what an image is, and whether it fits a platform |
 | | `media_fit` | write | Write a new copy of an image that satisfies a platform (never overwrites) |
+| Cloudflare | `cloudflare_zones`, `cloudflare_dns_list`, `cloudflare_tunnels`, `cloudflare_check` | read | Your zones, a zone's DNS records (by domain name), tunnels, and the token's validity |
+| | `cloudflare_read`, `cloudflare_endpoints` | read | Call any read-only Cloudflare endpoint by name; list endpoints |
+| | `cloudflare_dns_add`, `cloudflare_dns_update`, `cloudflare_purge` | write | Create or change a DNS record; purge the cache. They change a live site |
+| | `cloudflare_dns_delete` | **destructive** | Remove a public DNS record. Cannot be undone, and can take a site offline |
 | docli | `docli_token_check`, `docli_sizes`, `docli_regions`, `docli_images` | read | Account and catalog |
 | | `docli_droplet_list`, `docli_droplet_get`, `docli_vpc_list`, `docli_firewall_list`, `docli_ssh_key_list`, `docli_db_list`, `docli_domain_list`, `docli_dns_list` | read | Inventory |
 | | `docli_plan` | read | What `apply` would change and cost. Exit code 2 ("there are changes") is a normal result |
@@ -424,7 +431,7 @@ Decisions you should know about:
 | `no config file found (looked at ./agent-tools.toml, ~/.config/agent-tools/config.toml, ...)` | Run `notif-slack init` (or the tool's own `init`) and add a token. See [credentials](#set-up-the-tools-credentials). |
 | A token works in your shell but not through the assistant | The assistant filtered the environment. Put the credential in the CLI's config file, or pass it with `--env`. |
 | `docli_plan` reports a result with "exit code 2" | Not an error: it means the plan has changes. |
-| `x_post`, `linkedin_post` or an `instagram_*` publishing tool is missing | They are destructive and off by default. Re-register with `make mcp-register MCP_ALLOW=destructive`, or add `-allow destructive` to the server's command. |
+| `x_post`, `linkedin_post`, an `instagram_*` publishing tool or `cloudflare_dns_delete` is missing | They are destructive and off by default. Re-register with `make mcp-register MCP_ALLOW=destructive`, or add `-allow destructive` to the server's command. |
 | A tool you added does not appear | `agent-tools-mcp -list`. Check its `safety` is at or below `-allow`, then restart the assistant (tool lists are read at start). |
 | `grok`: "Not signed in" | `grok login` (or `--device-code`). |
 | Codex shows the call as "(failed)" | The CLI returned an error. The text of the error is in the result; it is not a connection fault. |

@@ -17,6 +17,10 @@ Claude Code skill that teaches an agent to drive it.
   [tools/x](tools/x/README.md), [tools/youtube](tools/youtube/README.md),
   [tools/linkedin](tools/linkedin/README.md) and
   [tools/instagram](tools/instagram/README.md).
+- **`cloudflare`**: zones, DNS records (by domain name), cache purge, tunnels and
+  Pages, on `apikit`, so any other endpoint is a few lines of TOML. Deleting a record
+  needs an explicit `--max-safety destructive`. See
+  [tools/cloudflare](tools/cloudflare/README.md).
 - **`posts`** and **`media`**: the two that tie the publishing tools together.
   `posts` is the ledger of what `x`, `linkedin` and `instagram` have published (they
   record every post, and refuse to publish the same text twice); `media` fits an
@@ -44,6 +48,7 @@ notif-tg     post --account gierd --chat releases --template deploy \
 | [`wharf`](tools/wharf) | SFTP | explore, sync, deploy, move, archive, pull, diff, verify, restore, prune, delete |
 | [`docli`](tools/docli) | DigitalOcean | droplets, VPCs, firewalls, DNS, databases; plan, apply |
 | [`reddit`](tools/reddit) | Reddit | search, fetch a post with comments, any endpoint |
+| [`cloudflare`](tools/cloudflare) | Cloudflare | zones, DNS records, cache purge, tunnels, Pages |
 | [`posts`](tools/posts) | the post log | list, find, report, store and refresh metrics |
 | [`media`](tools/media) | images | check and fit an image to Instagram, X or LinkedIn |
 | [`x`](tools/x) | X | search, timelines, threads, profile and engagement metrics, post, reply |
