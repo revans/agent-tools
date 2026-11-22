@@ -1,0 +1,145 @@
+# Facebook Graph API endpoints for a Facebook Page, Graph API v27.0 on
+# graph.facebook.com (version and base URL settable per account). Add your own in
+# ~/.config/agent-tools/facebook/endpoints.d/*.toml, in the same format, and
+# `facebook call NAME` runs them.
+#
+# Taken from Meta's Graph API reference (Page feed, Page photos, Post, Object
+# comments, Post insights, Page published_posts). Nothing here has been run
+# against the live API. The Page access token is added by the tool (in the form
+# body of a POST, the query string of a GET); never pass it as a parameter.
+
+[[endpoint]]
+name = "page_info"
+description = "The Page the access token belongs to: its id and name. The cheapest call that proves the token and page_id work."
+method = "GET"
+path = "/{page_id}"
+safety = "read"
+  [endpoint.fixed]
+  fields = "id,name"
+  [[endpoint.param]]
+  name = "page_id"
+  in = "path"
+  required = true
+  description = "The Page id."
+
+[[endpoint]]
+name = "post_create"
+description = "Publish a text post (optionally with a link) to the Page's feed, publicly. This cannot be undone through this tool. Needs a Page access token with pages_manage_posts. Either message or link must be given."
+method = "POST"
+path = "/{page_id}/feed"
+safety = "write"
+body = "form"
+  [[endpoint.param]]
+  name = "page_id"
+  in = "path"
+  required = true
+  description = "The Page id."
+  [[endpoint.param]]
+  name = "message"
+  in = "form"
+  required = true
+  description = "The text of the post."
+  [[endpoint.param]]
+  name = "link"
+  in = "form"
+  description = "A URL to attach to the post."
+
+[[endpoint]]
+name = "photo_create"
+description = "Publish a photo to the Page from a public image URL, publicly. This cannot be undone through this tool. Needs pages_manage_posts. The answer has id (the photo) and post_id (the feed post)."
+method = "POST"
+path = "/{page_id}/photos"
+safety = "write"
+body = "form"
+  [[endpoint.param]]
+  name = "page_id"
+  in = "path"
+  required = true
+  description = "The Page id."
+  [[endpoint.param]]
+  name = "url"
+  in = "form"
+  required = true
+  description = "Public URL of the image (up to 10 MB; jpeg, bmp, png, gif or tiff)."
+  [[endpoint.param]]
+  name = "caption"
+  in = "form"
+  description = "The description of the photo."
+
+[[endpoint]]
+name = "comment_create"
+description = "Publish a comment on a post of the Page, publicly. This cannot be undone through this tool. Needs pages_manage_engagement."
+method = "POST"
+path = "/{post_id}/comments"
+safety = "write"
+body = "form"
+  [[endpoint.param]]
+  name = "post_id"
+  in = "path"
+  required = true
+  description = "Id of the post to comment on, as returned by facebook post (PAGEID_POSTID)."
+  [[endpoint.param]]
+  name = "message"
+  in = "form"
+  required = true
+  description = "The comment text."
+
+[[endpoint]]
+name = "published_posts"
+description = "The Page's published posts, newest first: id, message, created_time and permalink_url. Needs pages_read_engagement. Meta returns about 600 ranked posts per year and at most 100 per request."
+method = "GET"
+path = "/{page_id}/published_posts"
+safety = "read"
+select = "data"
+  [endpoint.fixed]
+  fields = "id,message,created_time,permalink_url"
+  [endpoint.paginate]
+  cursor_path = "paging.cursors.after"
+  cursor_param = "after"
+  [[endpoint.param]]
+  name = "page_id"
+  in = "path"
+  required = true
+  description = "The Page id."
+  [[endpoint.param]]
+  name = "limit"
+  type = "integer"
+  default = "10"
+  description = "How many posts per request (1 to 100)."
+  [[endpoint.param]]
+  name = "after"
+  description = "Paging cursor, set by --pages."
+
+[[endpoint]]
+name = "post_fields"
+description = "A post's text, time and link with its reaction, comment and share counts (reactions.summary.total_count, comments.summary.total_count, shares.count). `facebook metrics` flattens this."
+method = "GET"
+path = "/{post_id}"
+safety = "read"
+  [endpoint.fixed]
+  fields = "id,message,created_time,permalink_url,reactions.summary(true).limit(0),comments.summary(true).limit(0),shares"
+  [[endpoint.param]]
+  name = "post_id"
+  in = "path"
+  required = true
+  description = "Post id (PAGEID_POSTID)."
+
+[[endpoint]]
+name = "post_insights"
+description = "Lifetime insights for one post: post_media_view and post_total_media_view_unique, which replaced post_impressions and post_impressions_unique (deprecated 15 Nov 2025 for all versions). Needs read_insights and pages_read_engagement, and a Page token of someone who can perform the ANALYZE task. Meta rejects the whole call if one metric is invalid."
+method = "GET"
+path = "/{post_id}/insights"
+safety = "read"
+  [[endpoint.param]]
+  name = "post_id"
+  in = "path"
+  required = true
+  description = "Post id (PAGEID_POSTID)."
+  [[endpoint.param]]
+  name = "metric"
+  default = "post_media_view,post_total_media_view_unique"
+  description = "Comma-separated metrics."
+  [[endpoint.param]]
+  name = "period"
+  default = "lifetime"
+  description = "Aggregation period."

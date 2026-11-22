@@ -1,0 +1,179 @@
+# Facebook tools (the facebook CLI, built on apikit). They work on a Facebook PAGE
+# only, with a Page access token kept in the [facebook] table of
+# ~/.config/agent-tools/config.toml. facebook_read runs any read-only endpoint by
+# name. There is deliberately no generic write tool: posting, sharing a photo and
+# commenting are the three named tools below.
+
+[[tool]]
+name = "facebook_post"
+description = "Publish a text post, optionally with a link, to the Facebook Page PUBLICLY. This cannot be undone through this tool. Returns the new post id (PAGEID_POSTID)."
+bin = "facebook"
+args = ["post"]
+safety = "destructive"
+timeout = "120s"
+  [[tool.param]]
+  name = "message"
+  type = "string"
+  flag = "--message"
+  required = true
+  example = "We shipped version 2.0 today. Read the notes at the link below."
+  description = "The exact post text."
+  [[tool.param]]
+  name = "link"
+  type = "string"
+  flag = "--link"
+  example = "https://example.com/blog/version-2"
+  description = "An http(s) URL to attach to the post."
+  [[tool.param]]
+  name = "account"
+  type = "string"
+  flag = "--account"
+  description = "Account name from the facebook config. Optional when there is one account or a default."
+  [[tool.param]]
+  name = "allow_duplicate"
+  type = "boolean"
+  flag = "--allow-duplicate"
+  description = "Publish even though this exact text was already published to this account in the last 30 days. Set it only when the user has asked for the repeat."
+
+[[tool]]
+name = "facebook_photo"
+description = "Publish a photo, with an optional caption, to the Facebook Page PUBLICLY. This cannot be undone through this tool. image_url must be a public http(s) URL of an image (jpeg, bmp, png, gif or tiff, up to 10 MB); local files are not accepted, upload the image first. Returns the post id."
+bin = "facebook"
+args = ["photo"]
+safety = "destructive"
+timeout = "120s"
+  [[tool.param]]
+  name = "image_url"
+  type = "string"
+  flag = "--image-url"
+  required = true
+  example = "https://example.com/images/launch.jpg"
+  description = "A direct, already-public http(s) URL of the image."
+  [[tool.param]]
+  name = "caption"
+  type = "string"
+  flag = "--caption"
+  example = "The team at the launch party."
+  description = "The exact caption to publish."
+  [[tool.param]]
+  name = "account"
+  type = "string"
+  flag = "--account"
+  description = "Account name from the facebook config."
+  [[tool.param]]
+  name = "allow_duplicate"
+  type = "boolean"
+  flag = "--allow-duplicate"
+  description = "Publish even though this exact text was already published to this account in the last 30 days. Set it only when the user has asked for the repeat."
+
+[[tool]]
+name = "facebook_comment"
+description = "Publish a comment on one of the Facebook Page's posts PUBLICLY, as the Page. This cannot be undone through this tool. post_id is the id returned by facebook_post or facebook_posts (PAGEID_POSTID), or supplied by the user."
+bin = "facebook"
+args = ["comment"]
+safety = "destructive"
+  [[tool.param]]
+  name = "post_id"
+  type = "string"
+  flag = "--post-id"
+  required = true
+  example = "1234567890_9876543210"
+  description = "Id of the post to comment on."
+  [[tool.param]]
+  name = "message"
+  type = "string"
+  flag = "--message"
+  required = true
+  example = "Thanks for the kind words, see you at the next one."
+  description = "The exact comment text."
+  [[tool.param]]
+  name = "account"
+  type = "string"
+  flag = "--account"
+  description = "Account name from the facebook config."
+  [[tool.param]]
+  name = "allow_duplicate"
+  type = "boolean"
+  flag = "--allow-duplicate"
+  description = "Publish even though this exact text was already published to this account in the last 30 days. Set it only when the user has asked for the repeat."
+
+[[tool]]
+name = "facebook_posts"
+description = "List the Facebook Page's published posts, newest first: id, message, created_time and permalink_url. Read-only."
+bin = "facebook"
+args = ["posts"]
+safety = "read"
+timeout = "90s"
+  [[tool.param]]
+  name = "limit"
+  type = "integer"
+  flag = "--limit"
+  example = "10"
+  description = "How many posts to return, 1 to 100 (default 10)."
+  [[tool.param]]
+  name = "account"
+  type = "string"
+  flag = "--account"
+  description = "Account name from the facebook config."
+
+[[tool]]
+name = "facebook_metrics"
+description = "Read one Facebook post's numbers: reactions, comments and shares, and, if the token has the read_insights permission, post_media_view and post_total_media_view_unique (Meta's replacements for the deprecated post_impressions metrics). If insights are refused the counts are still returned with insights_error beside them. Read-only. Use posts_refresh to store readings in the post log."
+bin = "facebook"
+args = ["metrics"]
+safety = "read"
+  [[tool.param]]
+  name = "post_id"
+  type = "string"
+  positional = true
+  required = true
+  example = "1234567890_9876543210"
+  description = "The post id, as returned by facebook_post (PAGEID_POSTID)."
+  [[tool.param]]
+  name = "account"
+  type = "string"
+  flag = "--account"
+  description = "Account name from the facebook config."
+
+[[tool]]
+name = "facebook_read"
+description = "Call any read-only Facebook API endpoint by name and return its JSON, for example `page_info` (which Page the token belongs to) or `post_fields`. Use facebook_endpoints first to see the endpoint names and their parameters. Cannot post, share or comment."
+bin = "facebook"
+args = ["call", "--max-safety=read"]
+safety = "read"
+timeout = "90s"
+  [[tool.param]]
+  name = "endpoint"
+  type = "string"
+  positional = true
+  required = true
+  example = "page_info"
+  description = "Endpoint name, e.g. page_info."
+  [[tool.param]]
+  name = "params"
+  type = "map"
+  flag = "--param"
+  description = "The endpoint's parameters as an object of strings, e.g. {\"post_id\": \"1234567890_9876543210\"}."
+  [[tool.param]]
+  name = "pages"
+  type = "integer"
+  flag = "--pages"
+  description = "For endpoints that paginate: follow the cursor for up to this many pages."
+  [[tool.param]]
+  name = "account"
+  type = "string"
+  flag = "--account"
+  description = "Account name from the facebook config."
+
+[[tool]]
+name = "facebook_endpoints"
+description = "List the Facebook API endpoints, or describe one in detail (parameters, types, which are required, whether it reads or writes)."
+bin = "facebook"
+args = ["endpoints"]
+safety = "read"
+  [[tool.param]]
+  name = "endpoint"
+  type = "string"
+  positional = true
+  example = "post_fields"
+  description = "Describe this one endpoint. Omit to list all."
