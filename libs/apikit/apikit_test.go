@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -426,5 +427,24 @@ func TestCLI(t *testing.T) {
 	code, out, _ = do("accounts", "--config", cfg)
 	if code != 0 || !strings.Contains(out, `"main"`) || strings.Contains(out, srv.URL) {
 		t.Errorf("accounts must list names and no settings: %d %q", code, out)
+	}
+}
+
+func TestCommandsGetTheStderrTheyWereRunWith(t *testing.T) {
+	svc := &Service{
+		Name: "demo", Summary: "demo", Version: "0", Builtin: spec,
+		NewClient: func(name string, acct map[string]any) (*Client, error) { return &Client{Auth: NoAuth{}}, nil },
+		Commands: []*Command{{Name: "warn", Summary: "writes a warning", Usage: "warn", NoAccount: true,
+			Run: func(r *Run) (any, error) {
+				fmt.Fprintln(r.Stderr, "heads up")
+				return map[string]any{"ok": true}, nil
+			}}},
+	}
+	var out, errb bytes.Buffer
+	if code := RunArgs(svc, []string{"warn"}, &out, &errb); code != 0 {
+		t.Fatalf("exit %d", code)
+	}
+	if !strings.Contains(errb.String(), "heads up") || strings.Contains(out.String(), "heads up") {
+		t.Errorf("warnings go to stderr, never into the JSON on stdout: stderr=%q stdout=%q", errb.String(), out.String())
 	}
 }

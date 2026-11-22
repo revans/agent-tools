@@ -51,6 +51,9 @@ type Run struct {
 	Ctx  context.Context
 	FS   *flag.FlagSet
 	Args []string // positional arguments
+	// Stderr is where a command writes warnings. It is the process stderr, or the
+	// writer a test passed to RunArgs.
+	Stderr io.Writer
 
 	account   string
 	config    string
@@ -117,7 +120,7 @@ func run(svc *Service, args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintf(stderr, "%s: unknown command %q. Run `%s help`.\n", svc.Name, args[0], svc.Name)
 		return 2
 	}
-	r := &Run{Svc: svc, Ctx: context.Background()}
+	r := &Run{Svc: svc, Ctx: context.Background(), Stderr: stderr}
 	fs := flag.NewFlagSet(svc.Name+" "+cmd.Name, flag.ContinueOnError)
 	fs.SetOutput(stderr)
 	fs.StringVar(&r.account, "account", "", "account name from the config (default: the default or only account)")
