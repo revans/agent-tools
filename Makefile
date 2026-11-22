@@ -26,7 +26,7 @@ MCP_ARGS  := $(if $(filter-out write,$(MCP_ALLOW)),-allow $(MCP_ALLOW),)
 
 CRATES   := notif-slack notif-tg
 GO       ?= go
-GO_TOOLS := wharf docli reddit youtube linkedin instagram x
+GO_TOOLS := wharf docli reddit youtube linkedin instagram x posts
 TARGET   := $(ROOT)/target/release
 
 DOCLI_VERSION ?= $(or $(shell git describe --tags --match 'v*' --always --dirty 2>/dev/null | sed 's/^v//'),dev)

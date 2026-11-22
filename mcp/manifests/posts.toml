@@ -1,0 +1,243 @@
+# The post log: what x, linkedin and instagram have published. They write to it
+# on their own after every publication; these tools read it, add to it, and keep
+# metrics. Nothing here publishes anything.
+
+[[tool]]
+name = "posts_list"
+description = "List what has been published through the x, linkedin and instagram tools, newest first, with the latest metrics reading for each. Use it to see what went out, or to check before posting. Filters narrow it down."
+bin = "posts"
+args = ["list"]
+safety = "read"
+  [[tool.param]]
+  name = "platform"
+  type = "string"
+  flag = "--platform"
+  description = "Only this platform: x, linkedin or instagram."
+
+  [[tool.param]]
+  name = "account"
+  type = "string"
+  flag = "--account"
+  description = "Only this account."
+  [[tool.param]]
+  name = "kind"
+  type = "string"
+  flag = "--kind"
+  enum = ["post", "reply", "comment"]
+  description = "Only this kind."
+  [[tool.param]]
+  name = "since"
+  type = "string"
+  flag = "--since"
+  description = "Only newer than this: 7d, 12h, 2w, a date like 2026-11-01, or an RFC 3339 time."
+  example = "7d"
+
+  [[tool.param]]
+  name = "limit"
+  type = "integer"
+  flag = "--limit"
+  description = "At most this many, newest first (default 20; 0 for all)."
+
+[[tool]]
+name = "posts_show"
+description = "One published post in full, with every metrics reading taken for it over time. Takes the ledger id (p_...), the platform's own id, or a unique start of either."
+bin = "posts"
+args = ["show"]
+safety = "read"
+  [[tool.param]]
+  name = "id"
+  type = "string"
+  positional = true
+  required = true
+  description = "The ledger id, the remote id, or a unique prefix of either."
+  example = "p_0123456789"
+
+[[tool]]
+name = "posts_find"
+description = "Find published posts by their text, to check whether something already went out before publishing it. An exact match ignores case and spacing; contains matches a part of the text."
+bin = "posts"
+args = ["find"]
+safety = "read"
+
+  [[tool.param]]
+  name = "text"
+  type = "string"
+  flag = "--text"
+  required = true
+  description = "The text to look for."
+  [[tool.param]]
+  name = "contains"
+  type = "boolean"
+  flag = "--contains"
+  description = "Match posts that contain the text, not only an exact match."
+  [[tool.param]]
+  name = "platform"
+  type = "string"
+  flag = "--platform"
+  description = "Only this platform."
+
+  [[tool.param]]
+  name = "within"
+  type = "string"
+  flag = "--within"
+  description = "Only posts newer than this: 30d, 12h, a date."
+  example = "30d"
+
+[[tool]]
+name = "posts_report"
+description = "A summary of what was published and how it did: counts per platform and kind, totals and averages of each metric from the latest reading of each post, and the top posts by a metric. Metrics only appear after posts_refresh or posts_metrics has stored readings."
+bin = "posts"
+args = ["report"]
+safety = "read"
+
+  [[tool.param]]
+  name = "since"
+  type = "string"
+  flag = "--since"
+  description = "Only posts newer than this: 30d, 7d, a date."
+  example = "7d"
+
+  [[tool.param]]
+  name = "platform"
+  type = "string"
+  flag = "--platform"
+  description = "Only this platform."
+
+  [[tool.param]]
+  name = "account"
+  type = "string"
+  flag = "--account"
+  description = "Only this account."
+  [[tool.param]]
+  name = "by"
+  type = "string"
+  flag = "--by"
+  description = "Rank the top posts by this metric, such as like_count or reply_count. Default: like_count when there is one."
+  example = "like_count"
+
+  [[tool.param]]
+  name = "top"
+  type = "integer"
+  flag = "--top"
+  description = "How many top posts to list (default 5)."
+
+[[tool]]
+name = "posts_where"
+description = "Where the post log is, how many posts and readings it holds, and which command posts_refresh runs for each platform."
+bin = "posts"
+args = ["where"]
+safety = "read"
+
+[[tool]]
+name = "posts_add"
+description = "Record a post that was published without these tools, so the log and the repeat check know about it. It records only; it publishes nothing."
+bin = "posts"
+args = ["add"]
+safety = "write"
+  [[tool.param]]
+  name = "platform"
+  type = "string"
+  flag = "--platform"
+  required = true
+  description = "x, linkedin, instagram, ..."
+
+  [[tool.param]]
+  name = "remote_id"
+  type = "string"
+  flag = "--remote-id"
+  required = true
+  description = "The platform's own id for the post."
+  example = "1850000000000000001"
+
+  [[tool.param]]
+  name = "text"
+  type = "string"
+  flag = "--text"
+  required = true
+  description = "The text as it was published."
+  [[tool.param]]
+  name = "kind"
+  type = "string"
+  flag = "--kind"
+  enum = ["post", "reply", "comment"]
+  description = "post (default), reply or comment."
+  [[tool.param]]
+  name = "account"
+  type = "string"
+  flag = "--account"
+  description = "The account it was published from."
+  [[tool.param]]
+  name = "url"
+  type = "string"
+  flag = "--url"
+  description = "A link to it."
+  example = "https://x.com/i/status/1850000000000000001"
+
+  [[tool.param]]
+  name = "target"
+  type = "string"
+  flag = "--target"
+  description = "What a reply or comment answers."
+  [[tool.param]]
+  name = "at"
+  type = "string"
+  flag = "--at"
+  description = "When it was published: a date or RFC 3339 time. Default: now."
+  example = "2026-11-01"
+
+[[tool]]
+name = "posts_metrics"
+description = "Store a metrics reading for a post, as a JSON object of numbers such as {\"like_count\": 12, \"reply_count\": 3}. Use it when you have read the numbers yourself; posts_refresh reads them automatically for platforms that have a configured command."
+bin = "posts"
+args = ["metrics"]
+safety = "write"
+
+  [[tool.param]]
+  name = "id"
+  type = "string"
+  positional = true
+  required = true
+  description = "The ledger id, the remote id, or a unique prefix."
+  example = "p_0123456789"
+
+  [[tool.param]]
+  name = "data"
+  type = "string"
+  flag = "--data"
+  required = true
+  description = "A JSON object of metrics, for example {\"like_count\": 12}."
+  example = "{\"like_count\": 3}"
+
+[[tool]]
+name = "posts_refresh"
+description = "Read fresh metrics for recent posts by running the read-only command configured for each platform (by default x thread for X), and store the readings. Platforms with no configured command are skipped. It reads from the platform's API and writes to the log; it never publishes. Give one id, or filter by platform and age."
+bin = "posts"
+args = ["refresh"]
+safety = "write"
+timeout = "600s"
+
+  [[tool.param]]
+  name = "id"
+  type = "string"
+  positional = true
+  description = "Refresh just this post (ledger id, remote id or prefix). Omit to refresh recent posts."
+  example = "p_0123456789"
+
+  [[tool.param]]
+  name = "platform"
+  type = "string"
+  flag = "--platform"
+  description = "Only this platform."
+
+  [[tool.param]]
+  name = "since"
+  type = "string"
+  flag = "--since"
+  description = "Only posts newer than this (default 30d)."
+  example = "7d"
+
+  [[tool.param]]
+  name = "limit"
+  type = "integer"
+  flag = "--limit"
+  description = "At most this many posts, newest first (default 20)."
