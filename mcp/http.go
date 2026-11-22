@@ -26,8 +26,9 @@ type httpConfig struct {
 	Token       string
 	CertFile    string
 	KeyFile     string
-	BehindProxy bool // a reverse proxy or tunnel on this host terminates TLS and forwards a public Host header
-	Insecure    bool // allow plain HTTP on a non-loopback address
+	BehindProxy bool         // a reverse proxy or tunnel on this host terminates TLS and forwards a public Host header
+	Insecure    bool         // allow plain HTTP on a non-loopback address
+	OAuth       *oauthServer // optional: lets OAuth clients (claude.ai, ChatGPT) connect
 }
 
 // loadToken reads the bearer token from a file (mode must not allow group or
@@ -110,20 +111,29 @@ func (c httpConfig) validate() error {
 	return nil
 }
 
-// bearer rejects every request that does not carry the exact token. Both sides
-// are hashed first so the comparison takes the same time whatever the input.
-func bearer(token string, next http.Handler) http.Handler {
+// bearer admits a request that carries either the static token or, when OAuth
+// is on, a live OAuth access token issued for this resource. Hashing both sides
+// of the static comparison keeps its running time independent of the input.
+func bearer(token string, oa *oauthServer, next http.Handler) http.Handler {
 	want := sha256.Sum256([]byte(token))
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		got, ok := strings.CutPrefix(r.Header.Get("Authorization"), "Bearer ")
-		sum := sha256.Sum256([]byte(strings.TrimSpace(got)))
-		if !ok || subtle.ConstantTimeCompare(sum[:], want[:]) != 1 {
-			logf("401 %s %s from %s", r.Method, r.URL.Path, r.RemoteAddr)
-			w.Header().Set("WWW-Authenticate", `Bearer realm="agent-tools-mcp"`)
-			http.Error(w, "unauthorized", http.StatusUnauthorized)
+		got = strings.TrimSpace(got)
+		sum := sha256.Sum256([]byte(got))
+		if ok && (subtle.ConstantTimeCompare(sum[:], want[:]) == 1 || (oa != nil && oa.store.validAccess(got, oa.resource))) {
+			next.ServeHTTP(w, r)
 			return
 		}
-		next.ServeHTTP(w, r)
+		logf("401 %s %s from %s", r.Method, r.URL.Path, r.RemoteAddr)
+		challenge := `Bearer realm="agent-tools-mcp"`
+		if oa != nil {
+			challenge += `, resource_metadata="` + oa.prmURL() + `"`
+		}
+		if ok && got != "" {
+			challenge += `, error="invalid_token"`
+		}
+		w.Header().Set("WWW-Authenticate", challenge)
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
 	})
 }
 
@@ -141,7 +151,10 @@ func httpHandler(server *mcp.Server, c httpConfig) http.Handler {
 		w.Header().Set("Content-Type", "text/plain")
 		fmt.Fprintln(w, "ok")
 	})
-	mux.Handle("/mcp", bearer(c.Token, mcpHandler))
+	mux.Handle("/mcp", bearer(c.Token, c.OAuth, mcpHandler))
+	if c.OAuth != nil {
+		c.OAuth.register(mux)
+	}
 	return mux
 }
 
@@ -171,6 +184,9 @@ func serveHTTP(server *mcp.Server, c httpConfig) error {
 		scheme = "https"
 	}
 	logf("listening on %s://%s/mcp", scheme, c.Addr)
+	if c.OAuth != nil {
+		logf("OAuth is on: clients connect to %s", c.OAuth.resource)
+	}
 	select {
 	case err := <-errc:
 		return err

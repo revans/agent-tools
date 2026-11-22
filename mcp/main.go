@@ -39,6 +39,8 @@ func main() {
 		tlsKey    = flag.String("tls-key", "", "with -http: TLS key file")
 		behind    = flag.Bool("behind-proxy", false, "with -http: a proxy or tunnel on this host terminates TLS and forwards its public Host header")
 		insecure  = flag.Bool("insecure-http", false, "with -http: allow plain HTTP on a non-loopback address")
+		publicURL = flag.String("public-url", os.Getenv("AGENT_TOOLS_MCP_PUBLIC_URL"), "with -http: the public https origin clients reach this server at; turns OAuth on (claude.ai, ChatGPT)")
+		oauthFile = flag.String("oauth-state", "", "with -public-url: where OAuth clients and tokens are kept (default ~/.local/state/agent-tools-mcp/oauth.json)")
 		genTok    = flag.String("gen-token", "", "write a new random bearer token to this file (mode 0600) and exit")
 	)
 	flag.Parse()
@@ -88,6 +90,20 @@ func main() {
 		}
 		if cfg.Token, err = loadToken(*tokenFile); err != nil {
 			fatal("%v", err)
+		}
+		if *publicURL != "" {
+			state := *oauthFile
+			if state == "" {
+				home, herr := os.UserHomeDir()
+				if herr != nil {
+					fatal("-oauth-state is needed: %v", herr)
+				}
+				state = filepath.Join(home, ".local", "state", "agent-tools-mcp", "oauth.json")
+			}
+			if cfg.OAuth, err = newOAuthServer(*publicURL, state, cfg.Token, *behind); err != nil {
+				fatal("%v", err)
+			}
+			logf("OAuth state: %s", state)
 		}
 		// Over HTTP no client launched us, so there is no cwd to inherit:
 		// every CLI runs in one configured directory.
