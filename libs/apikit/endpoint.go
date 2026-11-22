@@ -45,10 +45,16 @@ type Param struct {
 	Enum        []string `toml:"enum"`
 }
 
-// Paginate says how to follow a cursor.
+// Paginate says how to follow pages. By default the response holds a cursor
+// (cursor_path) that goes back in a parameter (cursor_param). With kind = "page"
+// the response holds the current page number (cursor_path) and the total number
+// of pages (total_path), and the next request asks for the page after this one,
+// until the last, as Cloudflare's lists do.
 type Paginate struct {
-	CursorPath  string `toml:"cursor_path"`  // where the next cursor sits in the response
+	Kind        string `toml:"kind"`         // "cursor" (default) or "page"
+	CursorPath  string `toml:"cursor_path"`  // where the next cursor (or the current page number) sits in the response
 	CursorParam string `toml:"cursor_param"` // the query parameter that carries it back
+	TotalPath   string `toml:"total_path"`   // page kind only: where the total number of pages sits
 	MaxPages    int    `toml:"max_pages"`    // ceiling for --pages (default 10)
 }
 
@@ -138,8 +144,22 @@ func (e *Endpoint) validate() error {
 		}
 		e.timeout = d
 	}
-	if e.Paginate != nil && (e.Paginate.CursorPath == "" || e.Paginate.CursorParam == "") {
-		return fmt.Errorf("paginate needs cursor_path and cursor_param")
+	if e.Paginate != nil {
+		if e.Paginate.CursorPath == "" || e.Paginate.CursorParam == "" {
+			return fmt.Errorf("paginate needs cursor_path and cursor_param")
+		}
+		switch e.Paginate.Kind {
+		case "", "cursor":
+			if e.Paginate.TotalPath != "" {
+				return fmt.Errorf("paginate total_path is only for kind = \"page\"")
+			}
+		case "page":
+			if e.Paginate.TotalPath == "" {
+				return fmt.Errorf("paginate kind \"page\" needs total_path")
+			}
+		default:
+			return fmt.Errorf("paginate kind %q is not cursor or page", e.Paginate.Kind)
+		}
 	}
 	seen := map[string]bool{}
 	for i := range e.Params {

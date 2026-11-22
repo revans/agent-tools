@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -180,6 +181,22 @@ func (c *Client) sendWithRetry(ctx context.Context, ep *Endpoint, built *Request
 	}
 }
 
+// wholeNumber reads a JSON number (or a numeric string) as an int, or 0.
+func wholeNumber(v any) int {
+	switch n := v.(type) {
+	case json.Number:
+		i, err := n.Int64()
+		if err == nil {
+			return int(i)
+		}
+	case string:
+		if i, err := strconv.Atoi(n); err == nil {
+			return i
+		}
+	}
+	return 0
+}
+
 func asHTTP(err error, target **HTTPError) bool {
 	he, ok := err.(*HTTPError)
 	if ok {
@@ -272,7 +289,13 @@ func (c *Client) send(ctx context.Context, ep *Endpoint, built *Request) (*Resul
 	}
 	res.Data = data
 	if ep.Paginate != nil {
-		if cur, _ := Select(decoded, ep.Paginate.CursorPath); cur != nil {
+		cur, _ := Select(decoded, ep.Paginate.CursorPath)
+		if ep.Paginate.Kind == "page" {
+			total, _ := Select(decoded, ep.Paginate.TotalPath)
+			if c, t := wholeNumber(cur), wholeNumber(total); c > 0 && c < t {
+				res.Cursor = strconv.Itoa(c + 1)
+			}
+		} else if cur != nil {
 			if s, ok := cur.(string); ok {
 				res.Cursor = s
 			} else if n, ok := cur.(json.Number); ok {

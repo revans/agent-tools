@@ -448,3 +448,61 @@ func TestCommandsGetTheStderrTheyWereRunWith(t *testing.T) {
 		t.Errorf("warnings go to stderr, never into the JSON on stdout: stderr=%q stdout=%q", errb.String(), out.String())
 	}
 }
+
+func TestPageNumberPagination(t *testing.T) {
+	var asked []string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		page := r.URL.Query().Get("page")
+		if page == "" {
+			page = "1"
+		}
+		asked = append(asked, page)
+		fmt.Fprintf(w, `{"result":[{"id":"p%s"}],"result_info":{"page":%s,"total_pages":3}}`, page, page)
+	}))
+	defer srv.Close()
+	doc := `[[endpoint]]
+name = "zones"
+description = "Zones."
+method = "GET"
+path = "/zones"
+safety = "read"
+select = "result"
+  [endpoint.paginate]
+  kind = "page"
+  cursor_path = "result_info.page"
+  cursor_param = "page"
+  total_path = "result_info.total_pages"
+  [[endpoint.param]]
+  name = "page"
+  type = "integer"
+  description = "Page."
+`
+	reg, err := LoadRegistry(doc, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ep, _ := reg.Get("zones")
+	c := &Client{BaseURL: srv.URL, HTTP: srv.Client()}
+	res, err := c.Call(context.Background(), ep, nil, 5)
+	if err != nil {
+		t.Fatal(err)
+	}
+	b, _ := json.Marshal(res.Data)
+	if string(b) != `[{"id":"p1"},{"id":"p2"},{"id":"p3"}]` || strings.Join(asked, ",") != "1,2,3" {
+		t.Errorf("follows pages 1 to 3 and stops at the last, however many were allowed: %s asked=%v", b, asked)
+	}
+	asked = nil
+	if res, _ = c.Call(context.Background(), ep, nil, 1); res.Cursor != "2" || len(asked) != 1 {
+		t.Errorf("one page reports the next page number: %q %v", res.Cursor, asked)
+	}
+	for name, bad := range map[string]string{
+		"page without a total": "kind = \"page\"\n  cursor_path = \"a\"\n  cursor_param = \"page\"",
+		"unknown kind":         "kind = \"offset\"\n  cursor_path = \"a\"\n  cursor_param = \"page\"",
+		"total on a cursor":    "cursor_path = \"a\"\n  cursor_param = \"page\"\n  total_path = \"t\"",
+	} {
+		d := strings.Replace(doc, "kind = \"page\"\n  cursor_path = \"result_info.page\"\n  cursor_param = \"page\"\n  total_path = \"result_info.total_pages\"", bad, 1)
+		if _, err := LoadRegistry(d, nil); err == nil {
+			t.Errorf("%s should be rejected", name)
+		}
+	}
+}
