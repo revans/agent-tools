@@ -82,10 +82,11 @@ type Client struct {
 
 // Result is what a call returns.
 type Result struct {
-	Data   any    // the selected and projected part of the response
-	Raw    any    // the whole decoded response
-	Status int    // HTTP status
-	Cursor string // next cursor, when the endpoint paginates and more exists
+	Data   any         // the selected and projected part of the response
+	Raw    any         // the whole decoded response
+	Status int         // HTTP status
+	Cursor string      // next cursor, when the endpoint paginates and more exists
+	Header http.Header // the response headers
 }
 
 func (c *Client) http() *http.Client {
@@ -163,6 +164,10 @@ func (c *Client) once(ctx context.Context, ep *Endpoint, params map[string]strin
 	if c.DryRun {
 		return &Result{Data: c.describe(built)}, nil
 	}
+	return c.sendWithRetry(ctx, ep, built)
+}
+
+func (c *Client) sendWithRetry(ctx context.Context, ep *Endpoint, built *Request) (*Result, error) {
 	retries := c.RetryLimit
 	for attempt := 0; ; attempt++ {
 		res, err := c.send(ctx, ep, built)
@@ -224,7 +229,7 @@ func (c *Client) send(ctx context.Context, ep *Endpoint, built *Request) (*Resul
 	if err != nil {
 		return nil, err
 	}
-	if c.Auth != nil {
+	if c.Auth != nil && !built.SkipAuth {
 		if err := c.Auth.Apply(req, false); err != nil {
 			return nil, err
 		}
@@ -255,7 +260,7 @@ func (c *Client) send(ctx context.Context, ep *Endpoint, built *Request) (*Resul
 			decoded = string(raw)
 		}
 	}
-	res := &Result{Raw: decoded, Status: resp.StatusCode}
+	res := &Result{Raw: decoded, Status: resp.StatusCode, Header: resp.Header}
 	data := decoded
 	if ep.Select != "" {
 		if data, err = Select(decoded, ep.Select); err != nil {
@@ -282,7 +287,7 @@ func (c *Client) send(ctx context.Context, ep *Endpoint, built *Request) (*Resul
 func (c *Client) describe(built *Request) map[string]any {
 	headers := map[string]string{}
 	if req, err := c.newRequest(context.Background(), built); err == nil {
-		if c.Auth != nil {
+		if c.Auth != nil && !built.SkipAuth {
 			_ = c.Auth.Apply(req, true)
 		}
 		for k := range req.Header {

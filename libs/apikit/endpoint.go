@@ -263,6 +263,8 @@ type Request struct {
 	Headers map[string]string
 	Body    []byte
 	Form    url.Values // set when the body is form-encoded
+	// SkipAuth sends the request without credentials, for a pre-signed upload URL.
+	SkipAuth bool
 }
 
 // Build turns an endpoint and the caller's parameters into a request.
