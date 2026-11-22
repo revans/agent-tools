@@ -20,7 +20,7 @@ LIBS       := $(ROOT)/libs
 
 CRATES   := notif-slack notif-tg
 GO       ?= go
-GO_TOOLS := wharf docli reddit youtube
+GO_TOOLS := wharf docli reddit youtube linkedin
 TARGET   := $(ROOT)/target/release
 
 DOCLI_VERSION ?= $(or $(shell git describe --tags --match 'v*' --always --dirty 2>/dev/null | sed 's/^v//'),dev)

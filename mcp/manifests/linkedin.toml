@@ -1,0 +1,69 @@
+# LinkedIn tools (the linkedin CLI, built on apikit). The access token lives in
+# the [linkedin] table of ~/.config/agent-tools/config.toml. linkedin_read runs
+# any read-only endpoint by name. There is deliberately no generic write tool:
+# publishing goes only through linkedin_post.
+
+[[tool]]
+name = "linkedin_post"
+description = "Publish a post to LinkedIn, optionally with one image (JPEG, GIF or PNG, at most 8 MB, an absolute path on the machine running the tool). THIS PUBLISHES PUBLICLY to the owner's LinkedIn feed and CANNOT BE UNDONE with this tool. Text is at most 3000 characters. Only call it with text the owner has approved. Returns the new post's id (a urn:li:share URN). Fails with a clear message when the access token has expired."
+bin = "linkedin"
+args = ["post"]
+safety = "destructive"
+timeout = "120s"
+  [[tool.param]]
+  name = "text"
+  type = "string"
+  flag = "--text"
+  required = true
+  description = "The exact post text, at most 3000 characters."
+  [[tool.param]]
+  name = "image"
+  type = "string"
+  flag = "--image"
+  description = "Path to a JPEG, GIF or PNG file to attach."
+  [[tool.param]]
+  name = "account"
+  type = "string"
+  flag = "--account"
+  description = "Account name from the linkedin config. Optional when there is one account or a default."
+
+[[tool]]
+name = "linkedin_read"
+description = "Call any read-only LinkedIn API endpoint by name and return its JSON. Use linkedin_endpoints first to see the endpoint names and their parameters. Today that is userinfo (who the token belongs to), plus any read endpoints the owner has added."
+bin = "linkedin"
+args = ["call", "--max-safety=read"]
+safety = "read"
+timeout = "90s"
+  [[tool.param]]
+  name = "endpoint"
+  type = "string"
+  positional = true
+  required = true
+  description = "Endpoint name, e.g. userinfo."
+  [[tool.param]]
+  name = "params"
+  type = "map"
+  flag = "--param"
+  description = "The endpoint's parameters as an object of strings."
+  [[tool.param]]
+  name = "pages"
+  type = "integer"
+  flag = "--pages"
+  description = "For endpoints that paginate: follow the cursor for up to this many pages."
+  [[tool.param]]
+  name = "account"
+  type = "string"
+  flag = "--account"
+  description = "Account name from the linkedin config."
+
+[[tool]]
+name = "linkedin_endpoints"
+description = "List the LinkedIn API endpoints known to the linkedin tool, or describe one in detail (parameters, types, which are required)."
+bin = "linkedin"
+args = ["endpoints"]
+safety = "read"
+  [[tool.param]]
+  name = "endpoint"
+  type = "string"
+  positional = true
+  description = "Describe this one endpoint. Omit to list all."

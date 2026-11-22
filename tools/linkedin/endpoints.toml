@@ -1,0 +1,88 @@
+# LinkedIn endpoints. Add your own in ~/.config/agent-tools/linkedin/endpoints.d/*.toml
+# (same format) and `linkedin call NAME` runs them. Base URL: api.linkedin.com.
+#
+# Written from Mimir's LinkedIn client, which says its request shapes were
+# verified live. Nothing here has been run against the live API by this tool.
+# `userinfo` is Mimir's identity lookup (the OIDC /v2/userinfo call, whose `sub`
+# is the member id every post needs); it needs the `openid` and `profile` scopes.
+#
+# The /rest/* calls need the Linkedin-Version header (YYYYMM; LinkedIn retires a
+# version about 12 months after release, so this one will need bumping) and
+# X-Restli-Protocol-Version: 2.0.0.
+
+[[endpoint]]
+name = "userinfo"
+description = "The member the access token belongs to (OpenID Connect userinfo). `sub` is the member id; the author URN is urn:li:person:SUB. Needs the openid and profile scopes. Not verified against the live API."
+method = "GET"
+path = "/v2/userinfo"
+safety = "read"
+fields = ["sub", "name"]
+
+[[endpoint]]
+name = "image_upload_init"
+description = "Step 1 of attaching an image: ask LinkedIn for an upload URL and an image URN for an owner. The `post` command then PUTs the bytes to the upload URL."
+method = "POST"
+path = "/rest/images"
+safety = "write"
+select = "value"
+  [endpoint.fixed]
+  action = "initializeUpload"
+  [endpoint.headers]
+  Linkedin-Version = "202608"
+  X-Restli-Protocol-Version = "2.0.0"
+  [[endpoint.param]]
+  name = "request"
+  wire = "initializeUploadRequest"
+  in = "body"
+  type = "json"
+  required = true
+  description = 'JSON object naming the owner, e.g. {"owner": "urn:li:person:ABC123"}.'
+
+[[endpoint]]
+name = "post_create"
+description = "Create a LinkedIn post (PUBLIC, main feed, published at once). THIS PUBLISHES PUBLICLY and cannot be undone through this tool. The new post's id comes back in the x-restli-id response header, which the `post` command reads; `call` prints only the (empty) body."
+method = "POST"
+path = "/rest/posts"
+safety = "write"
+  [endpoint.headers]
+  Linkedin-Version = "202608"
+  X-Restli-Protocol-Version = "2.0.0"
+  [[endpoint.param]]
+  name = "author"
+  in = "body"
+  required = true
+  description = "Author URN, e.g. urn:li:person:ABC123."
+  [[endpoint.param]]
+  name = "commentary"
+  in = "body"
+  required = true
+  description = "The post text, sent as given. LinkedIn treats ( ) [ ] { } < > # * _ ~ | @ and a backslash as markup; the `post` command escapes them, this endpoint does not."
+  [[endpoint.param]]
+  name = "visibility"
+  in = "body"
+  default = "PUBLIC"
+  description = "Who can see the post."
+  [[endpoint.param]]
+  name = "distribution"
+  in = "body"
+  type = "json"
+  default = '{"feedDistribution":"MAIN_FEED","targetEntities":[],"thirdPartyDistributionChannels":[]}'
+  description = "Distribution object."
+  [[endpoint.param]]
+  name = "lifecycle_state"
+  wire = "lifecycleState"
+  in = "body"
+  default = "PUBLISHED"
+  description = "PUBLISHED posts at once."
+  [[endpoint.param]]
+  name = "reshare_disabled"
+  wire = "isReshareDisabledByAuthor"
+  in = "body"
+  type = "boolean"
+  default = "false"
+  description = "Whether resharing is disabled."
+  [[endpoint.param]]
+  name = "content"
+  in = "body"
+  type = "json"
+  description = 'Optional attached media, e.g. {"media": {"id": "urn:li:image:ABC"}}.'
