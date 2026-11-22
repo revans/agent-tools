@@ -1,33 +1,45 @@
-# agent-tools — CLIs for agents: notif-slack, notif-tg (Rust) and wharf (Go).
+# agent-tools — CLIs for agents. Rust: notif-slack, notif-tg. Go: wharf, docli,
+# reddit (and the other API tools), plus agent-tools-mcp, the MCP server.
 #
 #   make            build every binary (release)
 #   make install    put them on your PATH
 #   make check      fmt, clippy and tests, the way CI would
 #   make help       every target, with a description
+#
+# To add a Go tool: put it in tools/NAME with a go.mod and add NAME to GO_TOOLS.
+# Build, test, install and uninstall targets (wharf, test-wharf, install-wharf,
+# uninstall-wharf, ...) then exist for it. A tool that needs special build
+# flags sets GOFLAGS_NAME.
 
 CARGO      ?= cargo
 PREFIX     ?= $(HOME)/.cargo
 SKILLS_DIR ?= $(HOME)/.claude/skills
 ROOT       := $(patsubst %/,%,$(dir $(abspath $(lastword $(MAKEFILE_LIST)))))
 TOOLS      := $(ROOT)/tools
+LIBS       := $(ROOT)/libs
 
-CRATES  := notif-slack notif-tg
-GO      ?= go
-BINS    := $(CRATES) wharf
-TARGET  := $(ROOT)/target/release
+CRATES   := notif-slack notif-tg
+GO       ?= go
+GO_TOOLS := wharf docli reddit
+TARGET   := $(ROOT)/target/release
+
+DOCLI_VERSION ?= $(or $(shell git describe --tags --match 'v*' --always --dirty 2>/dev/null | sed 's/^v//'),dev)
+GOFLAGS_docli := -trimpath -ldflags "-s -w -X main.version=$(DOCLI_VERSION)"
 
 .DEFAULT_GOAL := build
-DOCLI_VERSION ?= $(or $(shell git describe --tags --match 'v*' --always --dirty 2>/dev/null | sed 's/^v//'),dev)
 
-.PHONY: all build debug $(CRATES) wharf docli test-docli install-docli uninstall-docli mcp test-mcp install-mcp uninstall-mcp mcp-register mcp-unregister test-wharf install-wharf uninstall-wharf test lint fmt fmt-check check install uninstall skills unskills clean distclean help
+.PHONY: all build debug go-tools $(CRATES) $(GO_TOOLS) \
+        $(addprefix test-,$(GO_TOOLS)) $(addprefix install-,$(GO_TOOLS)) $(addprefix uninstall-,$(GO_TOOLS)) \
+        test-libs mcp test-mcp install-mcp uninstall-mcp mcp-register mcp-unregister \
+        test lint fmt fmt-check check install uninstall skills unskills clean distclean help
 
 all: build
 
 build: ## Build every binary in release mode
 	$(CARGO) build --release --workspace
-	$(MAKE) wharf
-	$(MAKE) docli
-	$(MAKE) mcp
+	$(MAKE) go-tools mcp
+
+go-tools: $(GO_TOOLS) ## Build every Go tool (wharf, docli, reddit, ...)
 
 debug: ## Build every binary in debug mode
 	$(CARGO) build --workspace
@@ -38,24 +50,28 @@ notif-slack: ## Build only the Slack binary
 notif-tg: ## Build only the Telegram binary
 	$(CARGO) build --release --package notif-tg
 
-wharf: ## Build only the wharf (SFTP deploy) binary
+# One Go tool: make NAME builds it, test-NAME vets and tests it,
+# install-NAME and uninstall-NAME manage it in PREFIX/bin.
+$(GO_TOOLS):
 	@mkdir -p "$(TARGET)"
-	cd "$(TOOLS)/wharf" && $(GO) build -o "$(TARGET)/wharf" .
+	cd "$(TOOLS)/$@" && $(GO) build $(GOFLAGS_$@) -o "$(TARGET)/$@" .
 
-docli: ## Build only docli (DigitalOcean)
-	@mkdir -p "$(TARGET)"
-	cd "$(TOOLS)/docli" && $(GO) build -trimpath -ldflags "-s -w -X main.version=$(DOCLI_VERSION)" -o "$(TARGET)/docli" .
+$(addprefix test-,$(GO_TOOLS)): test-%:
+	cd "$(TOOLS)/$*" && $(GO) vet ./... && $(GO) test ./...
 
-test-docli: ## Vet and test docli (a fake DigitalOcean API only)
-	cd "$(TOOLS)/docli" && $(GO) vet ./... && $(GO) test ./...
-
-install-docli: docli ## Install docli into PREFIX/bin
+$(addprefix install-,$(GO_TOOLS)): install-%: %
 	@mkdir -p "$(PREFIX)/bin"
-	install -m 0755 "$(TARGET)/docli" "$(PREFIX)/bin/docli"
-	@echo "installed docli -> $(PREFIX)/bin/docli"
+	install -m 0755 "$(TARGET)/$*" "$(PREFIX)/bin/$*"
+	@echo "installed $* -> $(PREFIX)/bin/$*"
 
-uninstall-docli: ## Remove docli from PREFIX/bin
-	@rm -f "$(PREFIX)/bin/docli"
+$(addprefix uninstall-,$(GO_TOOLS)): uninstall-%:
+	@rm -f "$(PREFIX)/bin/$*"
+
+test-libs: ## Vet and test the shared Go libraries (libs/)
+	@for d in $(LIBS)/*/; do \
+		echo "testing $$d"; \
+		(cd "$$d" && $(GO) vet ./... && $(GO) test ./...) || exit 1; \
+	done
 
 mcp: ## Build only the MCP server (agent-tools-mcp)
 	@mkdir -p "$(TARGET)"
@@ -86,10 +102,7 @@ mcp-unregister: ## Remove the MCP server from claude, codex and grok
 		if command -v $$c >/dev/null 2>&1; then $$c mcp remove agent-tools >/dev/null 2>&1 && echo "removed from $$c" || echo "not registered with $$c"; fi; \
 	done
 
-test-wharf: ## Vet and test wharf
-	cd "$(TOOLS)/wharf" && $(GO) vet ./... && $(GO) test ./...
-
-test: test-wharf test-docli test-mcp ## Run the test suite
+test: $(addprefix test-,$(GO_TOOLS)) test-libs test-mcp ## Run the test suite
 	$(CARGO) test --workspace
 
 lint: ## Run clippy, treating warnings as errors
@@ -103,27 +116,16 @@ fmt-check: ## Fail if the source is not formatted
 
 check: fmt-check lint test ## Everything CI would run
 
-install: install-wharf install-docli install-mcp ## Install every binary into PREFIX/bin (default ~/.cargo/bin)
+install: $(addprefix install-,$(GO_TOOLS)) install-mcp ## Install every binary into PREFIX/bin (default ~/.cargo/bin)
 	@for c in $(CRATES); do \
 		echo "installing $$c -> $(PREFIX)/bin/$$c"; \
 		$(CARGO) install --path "$(TOOLS)/$$c" --root "$(PREFIX)" --locked --force || exit 1; \
 	done
 
-install-wharf: wharf ## Install wharf into PREFIX/bin
-	@mkdir -p "$(PREFIX)/bin"
-	install -m 0755 "$(TARGET)/wharf" "$(PREFIX)/bin/wharf"
-	@echo "installed wharf -> $(PREFIX)/bin/wharf"
-
-uninstall-wharf: ## Remove wharf from PREFIX/bin
-	@rm -f "$(PREFIX)/bin/wharf"
-
-uninstall: ## Remove every binary from PREFIX/bin
+uninstall: $(addprefix uninstall-,$(GO_TOOLS)) uninstall-mcp ## Remove every binary from PREFIX/bin
 	@for c in $(CRATES); do \
 		$(CARGO) uninstall --root "$(PREFIX)" "$$c" || true; \
 	done
-	@$(MAKE) uninstall-wharf
-	@$(MAKE) uninstall-docli
-	@$(MAKE) uninstall-mcp
 
 skills: ## Symlink the Claude Code skills into SKILLS_DIR
 	@mkdir -p "$(SKILLS_DIR)"
@@ -147,4 +149,5 @@ help: ## Show this help
 		| sort \
 		| awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[1m%-12s\033[0m %s\n", $$1, $$2}'
 	@echo
+	@echo "Go tools: $(GO_TOOLS)  (make NAME, test-NAME, install-NAME, uninstall-NAME)"
 	@echo "variables: CARGO=$(CARGO) PREFIX=$(PREFIX) SKILLS_DIR=$(SKILLS_DIR)"
