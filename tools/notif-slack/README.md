@@ -17,7 +17,7 @@ are supported.
 
 ```bash
 make -C .. install        # or: cargo install --path .
-notif-slack init          # writes ~/.config/notif-slack/config.toml (mode 0600) + templates
+notif-slack init          # adds [notif-slack] to ~/.config/agent-tools/config.toml (mode 0600) + templates
 ```
 
 Then put a bot token in the config and check it:
@@ -28,7 +28,7 @@ notif-slack check
 
 ## Configuration
 
-`~/.config/notif-slack/config.toml` (or `--config`, `$NOTIF_SLACK_CONFIG`, `./notif-slack.toml`):
+The settings live in the shared agent-tools file, `~/.config/agent-tools/config.toml`, under a `[notif-slack]` table (see [docs/configuration.md](../../docs/configuration.md)). The examples below show what goes inside that table; in the shared file each header carries the prefix, so `[accounts.gierd]` is written `[notif-slack.accounts.gierd]`. The tool's own file, `~/.config/notif-slack/config.toml` (or `--config`, `$NOTIF_SLACK_CONFIG`, `./notif-slack.toml`), still works and holds the same thing without the prefix. To move an existing one in, run `notif-slack migrate`:
 
 ```toml
 default_account = "gierd"
@@ -108,6 +108,7 @@ defaults that a command-line flag overrides.
 | `notif-slack check [account]` | verify tokens via `auth.test` |
 | `notif-slack discover [account]` | channel ids from Slack, as TOML |
 | `notif-slack init` | write a starter config and templates |
+| `notif-slack migrate` | move this tool's own config file into the shared file, with its templates |
 | `notif-slack where` | show the config and template paths in use |
 
 Every listing command takes `--json`. `notif-slack post --json` returns the message

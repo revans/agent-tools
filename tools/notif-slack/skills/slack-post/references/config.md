@@ -5,16 +5,20 @@ One TOML file holds every workspace, every channel and every credential.
 
 1. `--config <path>`
 2. `$NOTIF_SLACK_CONFIG`
-3. `$XDG_CONFIG_HOME/notif-slack/config.toml`, else `~/.config/notif-slack/config.toml`
-4. `./notif-slack.toml`
+3. `./agent-tools.toml`, then `$XDG_CONFIG_HOME/agent-tools/config.toml` (else
+   `~/.config/agent-tools/config.toml`): the shared file, used when it has a
+   `[notif-slack]` table. Everything below is that table's content, with the
+   `notif-slack.` prefix on each header: `[accounts.x]` is `[notif-slack.accounts.x]` there
+4. `~/.config/notif-slack/config.toml`, then `./notif-slack.toml`: the tool's own file,
+   where the same settings sit at the top level
 
-`notif-slack init` writes a commented starter file with mode `0600`.
+`notif-slack init` adds a commented starter `[notif-slack]` table to the shared file (mode `0600`; the shared file is refused if other users can read it). `notif-slack migrate` moves an existing own-file in.
 
 ## Shape
 
 ```toml
 default_account = "gierd"
-# template_dir = "~/.config/notif-slack/templates"   # default: <config dir>/templates
+# template_dir = "~/.config/notif-slack/templates"   # default: <shared dir>/notif-slack/templates, or <config dir>/templates for the tool's own file
 
 [accounts.gierd]                 # the key is how you address it: --account gierd
 workspace = "gierd.slack.com"    # also builds permalinks for `notif-slack read`

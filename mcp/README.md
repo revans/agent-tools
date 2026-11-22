@@ -85,12 +85,18 @@ To undo: `make mcp-unregister`.
 The server starts without any of this, but each tool needs its CLI configured.
 Do it once, in a terminal, the same way you would without the server.
 
+The Slack, Telegram and Reddit tools keep their accounts in **one shared file**,
+`~/.config/agent-tools/config.toml`, with a table per tool. Its location, lookup
+order and the rule that it must be mode 0600 are in
+[docs/configuration.md](../docs/configuration.md). An existing notif config moves
+in with `notif-slack migrate` and `notif-tg migrate`.
+
 | Tools | Set up | Details |
 | --- | --- | --- |
-| `slack_*` | `notif-slack init`, then add a bot token to `~/.config/notif-slack/config.toml`; check with `notif-slack check` | [notif-slack/README.md](../tools/notif-slack/README.md) |
-| `tg_*` | `notif-tg init`, add a BotFather token; check with `notif-tg check` | [notif-tg/README.md](../tools/notif-tg/README.md) |
+| `slack_*` | `notif-slack init` (adds a `[notif-slack]` table to the shared config file), then add a bot token; check with `notif-slack check` | [notif-slack/README.md](../tools/notif-slack/README.md) |
+| `tg_*` | `notif-tg init` (adds `[notif-tg]`), add a BotFather token; check with `notif-tg check` | [notif-tg/README.md](../tools/notif-tg/README.md) |
 | `wharf_*` | a `.wharf` file at the root of your site repo | [wharf/README.md](../tools/wharf/README.md) |
-| `reddit_*` | `reddit init`, then add a Reddit app's client id and secret to `~/.config/reddit/config.toml`; check with `reddit check` | [reddit/README.md](../tools/reddit/README.md) |
+| `reddit_*` | `reddit init` (adds `[reddit]`), then add a Reddit app's client id and secret; check with `reddit check` | [reddit/README.md](../tools/reddit/README.md) |
 | `docli_*` | `DIGITALOCEAN_TOKEN`, or a token in `~/.config/docli/token` (mode 0600) | [docli/README.md](../tools/docli/README.md) |
 
 Two of those are per project: **wharf** reads `.wharf` and **docli plan** reads
@@ -192,7 +198,7 @@ reversible or additive. No destructive tool ships built in.
 | | `wharf_copy` | write | Upload one file (backs up the old remote file first) |
 | | `wharf_pull`, `wharf_mkdir`, `wharf_explore` | write | Download, create a directory, write `WHARF.md` |
 | Reddit | `reddit_search`, `reddit_fetch` | read | Search; one post with its best comments |
-| | `reddit_read` | read | Call any read-only Reddit endpoint by name, including ones you add under `~/.config/reddit/endpoints.d` |
+| | `reddit_read` | read | Call any read-only Reddit endpoint by name, including ones you add under `~/.config/agent-tools/reddit/endpoints.d` |
 | | `reddit_endpoints` | read | List endpoints or show one's parameters |
 | docli | `docli_token_check`, `docli_sizes`, `docli_regions`, `docli_images` | read | Account and catalog |
 | | `docli_droplet_list`, `docli_droplet_get`, `docli_vpc_list`, `docli_firewall_list`, `docli_ssh_key_list`, `docli_db_list`, `docli_domain_list`, `docli_dns_list` | read | Inventory |
@@ -379,7 +385,7 @@ Decisions you should know about:
 | `claude mcp list` shows ✗ Failed | Run `agent-tools-mcp -list` in a terminal. A manifest error is printed there. Check that `~/.cargo/bin` is on the PATH the assistant sees. |
 | Tool returns "`wharf` is not installed: it is not on PATH or next to agent-tools-mcp" | Run `make install`. Binaries are found on PATH, or in the same directory as `agent-tools-mcp`. |
 | `wharf: no .wharf file found in /some/dir` | The assistant was started in a directory without a `.wharf`. Start it in the site repo. |
-| `no config file found (looked at ~/.config/notif-slack/...)` | Run `notif-slack init` and add a token. See [credentials](#set-up-the-tools-credentials). |
+| `no config file found (looked at ./agent-tools.toml, ~/.config/agent-tools/config.toml, ...)` | Run `notif-slack init` (or the tool's own `init`) and add a token. See [credentials](#set-up-the-tools-credentials). |
 | A token works in your shell but not through the assistant | The assistant filtered the environment. Put the credential in the CLI's config file, or pass it with `--env`. |
 | `docli_plan` reports a result with "exit code 2" | Not an error: it means the plan has changes. |
 | A tool you added does not appear | `agent-tools-mcp -list`. Check its `safety` is at or below `-allow`, then restart the assistant (tool lists are read at start). |

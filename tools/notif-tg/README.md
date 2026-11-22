@@ -18,7 +18,7 @@ Companion to [`notif-slack`](../notif-slack), which does the same for Slack.
 
 ```bash
 make -C .. install        # or: cargo install --path .
-notif-tg init        # writes ~/.config/notif-tg/config.toml (0600) + templates
+notif-tg init          # adds [notif-tg] to ~/.config/agent-tools/config.toml (mode 0600) + templates
 ```
 
 Create a bot with [@BotFather](https://t.me/BotFather), paste the token into the
@@ -29,6 +29,8 @@ notif-tg check
 ```
 
 ## Configuration
+
+The settings live in the shared agent-tools file, `~/.config/agent-tools/config.toml`, under a `[notif-tg]` table (see [docs/configuration.md](../../docs/configuration.md)). The example below shows what goes inside that table; in the shared file each header carries the prefix, so `[accounts.gierd]` is written `[notif-tg.accounts.gierd]`. The tool's own file, `~/.config/notif-tg/config.toml` (or `--config`, `$NOTIF_TG_CONFIG`, `./notif-tg.toml`), still works and holds the same thing without the prefix. To move an existing one in, run `notif-tg migrate`.
 
 ```toml
 default_account = "gierd"
@@ -138,6 +140,7 @@ Forum supergroups also have topics: `--topic <id>`, or `topic_id` per chat.
 | `notif-tg check [account]` | verify tokens and every configured chat |
 | `notif-tg discover [account]` | chat ids seen in recent updates, as TOML |
 | `notif-tg init` | write a starter config and templates |
+| `notif-tg migrate` | move this tool's own config file into the shared file, with its templates |
 | `notif-tg where` | show config, template and state paths |
 
 Every command takes `--json`. Message sources, in place of `--template`:

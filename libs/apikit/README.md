@@ -15,8 +15,8 @@ for free.
 | `NAME call ENDPOINT --param k=v ...` | call any endpoint by name |
 | `NAME check` | verify the credentials with the cheapest real call |
 | `NAME accounts` | list configured accounts (never prints secrets) |
-| `NAME init` | write a starter config at mode 0600 |
-| `NAME where` | show where the config and extra endpoints are read from |
+| `NAME init` | add the tool's starter `[NAME]` table to the shared config file (mode 0600) |
+| `NAME where` | show which config file is used, whether it is the shared file, and where extra endpoints are read from |
 | ... | plus the service's own high-level commands |
 
 Every command takes `--account`, `--config`, `--dry-run`, `--debug`,
@@ -25,8 +25,9 @@ to stderr; exit 0 is ok, 1 an error, 2 a usage mistake.
 
 ## Adding an endpoint (no code, no rebuild)
 
-Create `~/.config/TOOL/endpoints.d/anything.toml`, or point
-`TOOL_ENDPOINTS=/some/dir` at a directory (`:`-separated for several):
+Create `~/.config/agent-tools/TOOL/endpoints.d/anything.toml` (or
+`~/.config/TOOL/endpoints.d/`), or point `TOOL_ENDPOINTS=/some/dir` at a directory
+(`:`-separated for several):
 
 ```toml
 [[endpoint]]
@@ -148,15 +149,21 @@ response; `Result.Data` is the `select`ed and `fields`-projected part. See
 Anything else implements `Authenticator` (one method, `Apply(req, dry)`). With
 `dry` set it must neither use the network nor reveal a secret.
 
-### Credentials
+### Configuration and credentials
 
-An account is a table in the tool's config; each credential can be written three
-ways, and exactly one may be present:
+A tool reads the shared agent-tools file, with its settings in a table named for
+it, and falls back to its own older file. The lookup order, the 0600 rule, and
+how the Rust tools do the same are in
+[docs/configuration.md](../../docs/configuration.md). `config.go` implements it
+(`LoadConfig`, `Nest`, `AddToShared`, `InitShared`).
+
+An account is a table in the tool's settings; each credential can be written
+three ways, and exactly one may be present:
 
 ```toml
-[accounts.main]
-client_id = "literal"                  # simplest
-client_id_env = "REDDIT_ID"            # read from an environment variable
+[reddit.accounts.main]
+client_id = "literal"                       # simplest
+client_id_env = "REDDIT_ID"                 # read from an environment variable
 client_id_command = "pass show reddit/id"   # stdout of a command
 ```
 

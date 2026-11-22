@@ -57,11 +57,16 @@ override where `install` and `skills` put things.
 
 ## Set up
 
+Every tool that needs credentials reads one shared file, `~/.config/agent-tools/config.toml`,
+with a table per tool. See [docs/configuration.md](docs/configuration.md) for the
+rules, where each tool looks, and how to move an existing config in.
+
+
 Each tool writes its own starter config, at mode 0600:
 
 ```bash
-notif-slack init   # ~/.config/notif-slack/config.toml   — then add a bot token
-notif-tg     init  # ~/.config/notif-tg/config.toml      — then add a BotFather token
+notif-slack init   # adds [notif-slack] to ~/.config/agent-tools/config.toml — then add a bot token
+notif-tg     init  # adds [notif-tg] to the same file                      — then add a BotFather token
 
 notif-slack check  # verify the credentials
 notif-tg     check

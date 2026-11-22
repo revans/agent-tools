@@ -5,16 +5,20 @@ prints the paths in use. Resolution order:
 
 1. `--config <path>`
 2. `$NOTIF_TG_CONFIG`
-3. `$XDG_CONFIG_HOME/notif-tg/config.toml`, else `~/.config/notif-tg/config.toml`
-4. `./notif-tg.toml`
+3. `./agent-tools.toml`, then `$XDG_CONFIG_HOME/agent-tools/config.toml` (else
+   `~/.config/agent-tools/config.toml`): the shared file, used when it has a
+   `[notif-tg]` table. Everything below is that table's content, with the
+   `notif-tg.` prefix on each header: `[accounts.x]` is `[notif-tg.accounts.x]` there
+4. `~/.config/notif-tg/config.toml`, then `./notif-tg.toml`: the tool's own file,
+   where the same settings sit at the top level
 
-`notif-tg init` writes a commented starter file with mode `0600`.
+`notif-tg init` adds a commented starter `[notif-tg]` table to the shared file (mode `0600`; the shared file is refused if other users can read it). `notif-tg migrate` moves an existing own-file in.
 
 ## Shape
 
 ```toml
 default_account = "gierd"
-# template_dir = "~/.config/notif-tg/templates"   # default: <config dir>/templates
+# template_dir = "~/.config/notif-tg/templates"   # default: <shared dir>/notif-tg/templates, or <config dir>/templates for the tool's own file
 # state_dir = "~/.local/state/notif-tg"           # where read/watch keep their place
 
 [accounts.gierd]              # the key is how you address it: --account gierd

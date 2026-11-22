@@ -15,12 +15,13 @@ reddit call subreddit_about --param subreddit=golang
 
 1. Create an app at <https://www.reddit.com/prefs/apps> (type *script* or *web*)
    and copy its client id and secret.
-2. `reddit init` writes `~/.config/reddit/config.toml` (mode 0600). Fill it in:
+2. `reddit init` adds a `[reddit]` table to the shared file, `~/.config/agent-tools/config.toml` (mode 0600; see [docs/configuration.md](../../docs/configuration.md)). Fill it in:
 
    ```toml
+   [reddit]
    default = "main"
 
-   [accounts.main]
+   [reddit.accounts.main]
    client_id     = "..."          # or client_id_env / client_id_command
    client_secret = "..."
    # user_agent  = "agent-tools-reddit/0.1 (by /u/yourname)"
@@ -53,7 +54,7 @@ JSON. See `reddit help` for the flags every command takes.
 | `subreddit_listing` | `GET /r/{subreddit}/{hot,new,top,rising}` |
 | `subreddit_about` | `GET /r/{subreddit}/about` |
 
-Add your own in `~/.config/reddit/endpoints.d/*.toml` (or a directory in
+Add your own in `~/.config/agent-tools/reddit/endpoints.d/*.toml` (or a directory in
 `$REDDIT_ENDPOINTS`). The format, with an example, is in the
 [apikit README](../../libs/apikit/README.md#adding-an-endpoint-no-code-no-rebuild).
 Through the MCP server an added endpoint is callable at once with `reddit_read`.
