@@ -20,10 +20,58 @@ func TestBuiltinManifestsLoad(t *testing.T) {
 	if len(tools) < 30 {
 		t.Fatalf("expected the built-in tools, got %d", len(tools))
 	}
+	// A destructive tool is off unless the server is started with -allow
+	// destructive, so shipping one is safe. It must still tell the model, and
+	// whoever reads the manifest, what it does: it publishes, and cannot be undone.
+	for _, tl := range tools {
+		if tl.Safety != SafetyDestructive {
+			continue
+		}
+		d := strings.ToLower(tl.Description)
+		if !strings.Contains(d, "publish") || !strings.Contains(d, "cannot be undone") {
+			t.Errorf("%s is destructive, so its description must say it publishes and cannot be undone: %q", tl.Name, tl.Description)
+		}
+		if len(tl.Params) == 0 {
+			t.Errorf("%s: a destructive tool must take explicit arguments", tl.Name)
+		}
+	}
+}
+
+// The default server must not offer any destructive tool: that is what makes
+// shipping them safe.
+func TestDefaultServerHidesEveryDestructiveBuiltin(t *testing.T) {
+	tools, err := loadTools(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	server, n := newServer(tools, safetyRank[SafetyWrite])
+	ct, st := mcp.NewInMemoryTransports()
+	ctx := context.Background()
+	if _, err := server.Connect(ctx, st, nil); err != nil {
+		t.Fatal(err)
+	}
+	sess, err := mcp.NewClient(&mcp.Implementation{Name: "t"}, nil).Connect(ctx, ct, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer sess.Close()
+	listed, err := sess.ListTools(ctx, nil)
+	if err != nil || len(listed.Tools) != n {
+		t.Fatalf("%v %d/%d", err, len(listed.Tools), n)
+	}
+	hidden := map[string]bool{}
 	for _, tl := range tools {
 		if tl.Safety == SafetyDestructive {
-			t.Errorf("%s: destructive tools must not ship in the built-in set", tl.Name)
+			hidden[tl.Name] = true
 		}
+	}
+	for _, lt := range listed.Tools {
+		if hidden[lt.Name] {
+			t.Errorf("%s is destructive and must not be registered at the default level", lt.Name)
+		}
+	}
+	if len(hidden) == 0 {
+		t.Log("no destructive built-ins yet")
 	}
 }
 
