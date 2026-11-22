@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"sort"
 	"strings"
 	"time"
 )
@@ -272,9 +271,10 @@ func (r *Run) Registry() (*Registry, error) {
 }
 
 func endpointDirs(tool string) []string {
-	var dirs []string
-	if d, err := os.UserConfigDir(); err == nil {
-		dirs = append(dirs, filepath.Join(d, tool, "endpoints.d"))
+	home := ConfigHome()
+	dirs := []string{
+		filepath.Join(home, "agent-tools", tool, "endpoints.d"),
+		filepath.Join(home, tool, "endpoints.d"),
 	}
 	for _, d := range strings.Split(os.Getenv(envName(tool, "ENDPOINTS")), ":") {
 		if d != "" {
@@ -405,21 +405,43 @@ func cmdAccounts(r *Run) (any, error) {
 }
 
 func cmdInit(r *Run) (any, error) {
-	path, exists := ConfigPath(r.Svc.Name, r.config)
-	if exists {
-		return nil, fmt.Errorf("%s already exists; not overwriting it", path)
+	// With --config the file is the tool's own. Otherwise the settings go into the
+	// shared agent-tools file, beside any other tool's table.
+	if r.config != "" {
+		if err := WriteStarter(r.config, r.Svc.Starter); err != nil {
+			return nil, err
+		}
+		return map[string]any{"wrote": r.config, "next": "add your credentials, then run `" + r.Svc.Name + " check`"}, nil
 	}
-	if err := WriteStarter(path, r.Svc.Starter); err != nil {
+	dest := UserConfigPath(ConfigHome())
+	if err := InitShared(r.Svc.Name, r.Svc.Starter, dest); err != nil {
 		return nil, err
 	}
-	return map[string]any{"wrote": path, "next": "add your credentials, then run `" + r.Svc.Name + " check`"}, nil
+	return map[string]any{
+		"wrote": dest,
+		"table": "[" + r.Svc.Name + "]",
+		"next":  "add your credentials, then run `" + r.Svc.Name + " check`",
+	}, nil
 }
 
 func cmdWhere(r *Run) (any, error) {
-	path, exists := ConfigPath(r.Svc.Name, r.config)
+	loc := NewLocator(r.Svc.Name)
 	dirs := endpointDirs(r.Svc.Name)
-	sort.Strings(dirs)
-	return map[string]any{"config": path, "config_exists": exists, "endpoint_dirs": dirs}, nil
+	out := map[string]any{
+		"searched":      loc.Searched(r.Svc.Name),
+		"expected":      UserConfigPath(loc.ConfigHome),
+		"endpoint_dirs": dirs,
+	}
+	cfg, err := loc.Load(r.Svc.Name, r.config)
+	if err != nil {
+		out["config"], out["error"] = nil, err.Error()
+		return out, nil
+	}
+	out["config"], out["unified"], out["dir"] = cfg.Path, cfg.Unified, cfg.Dir()
+	if cfg.Unified {
+		out["table"] = "[" + r.Svc.Name + "]"
+	}
+	return out, nil
 }
 
 // Timeout is a helper for commands that need a bounded context.
