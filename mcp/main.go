@@ -31,8 +31,24 @@ func main() {
 		extra    = flag.String("tools", os.Getenv("AGENT_TOOLS_MCP_TOOLS"), "extra directories of *.toml tool manifests, separated by ':'")
 		list     = flag.Bool("list", false, "print the tools that would be registered and exit")
 		showVers = flag.Bool("version", false, "print the version and exit")
+
+		httpAddr  = flag.String("http", "", "serve MCP over HTTP at this address (e.g. 127.0.0.1:8808) instead of stdio")
+		tokenFile = flag.String("token-file", "", "file holding the bearer token for -http (mode 0600); else $AGENT_TOOLS_MCP_TOKEN")
+		cwd       = flag.String("cwd", "", "with -http: the directory every CLI runs in (default: the current directory)")
+		tlsCert   = flag.String("tls-cert", "", "with -http: TLS certificate file")
+		tlsKey    = flag.String("tls-key", "", "with -http: TLS key file")
+		behind    = flag.Bool("behind-proxy", false, "with -http: a proxy or tunnel on this host terminates TLS and forwards its public Host header")
+		insecure  = flag.Bool("insecure-http", false, "with -http: allow plain HTTP on a non-loopback address")
+		genTok    = flag.String("gen-token", "", "write a new random bearer token to this file (mode 0600) and exit")
 	)
 	flag.Parse()
+	if *genTok != "" {
+		if err := genToken(*genTok); err != nil {
+			fatal("%v", err)
+		}
+		fmt.Printf("wrote a new token to %s\n", *genTok)
+		return
+	}
 	if *showVers {
 		fmt.Println(version)
 		return
@@ -65,6 +81,27 @@ func main() {
 		return
 	}
 	server, registered := newServer(tools, limit)
+	if *httpAddr != "" {
+		cfg := httpConfig{Addr: *httpAddr, CertFile: *tlsCert, KeyFile: *tlsKey, BehindProxy: *behind, Insecure: *insecure}
+		if err := cfg.validate(); err != nil {
+			fatal("%v", err)
+		}
+		if cfg.Token, err = loadToken(*tokenFile); err != nil {
+			fatal("%v", err)
+		}
+		// Over HTTP no client launched us, so there is no cwd to inherit:
+		// every CLI runs in one configured directory.
+		if *cwd != "" {
+			if err := os.Chdir(*cwd); err != nil {
+				fatal("-cwd: %v", err)
+			}
+		}
+		logf("serving %d tools, CLIs run in %s", registered, mustGetwd())
+		if err := serveHTTP(server, cfg); err != nil {
+			fatal("%v", err)
+		}
+		return
+	}
 	logf("serving %d tools from %s", registered, mustGetwd())
 	if err := server.Run(context.Background(), &mcp.StdioTransport{}); err != nil {
 		fatal("%v", err)
