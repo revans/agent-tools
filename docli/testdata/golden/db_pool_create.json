@@ -1,0 +1,10 @@
+{
+  "name": "app_pool",
+  "user": "rails",
+  "database": "app_production",
+  "mode": "transaction",
+  "size": 10,
+  "host": "app-db-do-user-1-0.db.ondigitalocean.com",
+  "private_host": "private-app-db-do-user-1-0.db.ondigitalocean.com",
+  "port": 25061
+}

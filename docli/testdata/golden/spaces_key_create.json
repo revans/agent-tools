@@ -1,0 +1,13 @@
+{
+  "name": "docli-ci",
+  "access_key_id": "DO00NEWKEY00005005",
+  "grants": [
+    {
+      "bucket": "docli-assets",
+      "permission": "read"
+    }
+  ],
+  "managed": true,
+  "created_at": "2026-11-12T10:00:00Z",
+  "secret_file": "/SECRET_DIR/key.secret"
+}

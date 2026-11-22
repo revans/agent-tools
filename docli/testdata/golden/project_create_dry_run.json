@@ -1,0 +1,15 @@
+{
+  "dry_run": true,
+  "plan": {
+    "action": "project.create",
+    "summary": "create the project \"docli-shop\"",
+    "steps": [
+      "purpose: Web Application",
+      "environment: Production",
+      "a project is a folder for grouping resources; it has no charge of its own",
+      "the name gets the prefix docli- so docli can tell it created this project (projects cannot carry tags)"
+    ],
+    "warnings": [],
+    "monthly_cost_usd": null
+  }
+}

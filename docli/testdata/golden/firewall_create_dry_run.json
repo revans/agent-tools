@@ -1,0 +1,18 @@
+{
+  "dry_run": true,
+  "plan": {
+    "action": "firewall.create",
+    "summary": "create firewall \"docli-web\"",
+    "steps": [
+      "the name gets the prefix docli- so docli can tell it created this firewall (firewalls cannot carry tags)",
+      "resulting rule list (2):",
+      "  in:tcp:22:from=10.116.0.0/20  =  Allow incoming TCP on port 22 from 10.116.0.0/20",
+      "  out:tcp:all:to=0.0.0.0/0  =  Allow outgoing TCP on all ports to anywhere (0.0.0.0/0)",
+      "not attached to anything yet (use: docli firewall attach)"
+    ],
+    "warnings": [
+      "DigitalOcean firewalls deny by default: attached droplets accept only what an inbound rule allows and send only what an outbound rule allows."
+    ],
+    "monthly_cost_usd": null
+  }
+}

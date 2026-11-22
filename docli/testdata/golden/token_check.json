@@ -1,0 +1,54 @@
+{
+  "valid": true,
+  "email": "owner@example.test",
+  "status": "active",
+  "team": "Fake Team",
+  "droplet_limit": 25,
+  "source": "environment variable DIGITALOCEAN_TOKEN",
+  "read_access": [
+    {
+      "resource": "droplets",
+      "read": "allowed",
+      "detail": "read works"
+    },
+    {
+      "resource": "ssh keys",
+      "read": "allowed",
+      "detail": "read works"
+    },
+    {
+      "resource": "vpcs",
+      "read": "allowed",
+      "detail": "read works"
+    },
+    {
+      "resource": "firewalls",
+      "read": "allowed",
+      "detail": "read works"
+    },
+    {
+      "resource": "tags",
+      "read": "allowed",
+      "detail": "read works"
+    },
+    {
+      "resource": "sizes",
+      "read": "allowed",
+      "detail": "read works"
+    },
+    {
+      "resource": "domains",
+      "read": "allowed",
+      "detail": "read works"
+    },
+    {
+      "resource": "databases",
+      "read": "allowed",
+      "detail": "read works"
+    }
+  ],
+  "write_access": "unknown: DigitalOcean offers no way to ask a token what it may change, and docli will not change anything just to find out",
+  "notes": [
+    "scopes are inferred from read requests; the API does not list a token's scopes"
+  ]
+}

@@ -1,0 +1,42 @@
+[
+  {
+    "id": 2,
+    "slug": "debian-12-x64",
+    "name": "12 x64",
+    "type": "base",
+    "distribution": "Debian",
+    "public": true,
+    "status": "available",
+    "min_disk_gb": 10,
+    "regions": [
+      "nyc3"
+    ]
+  },
+  {
+    "id": 3,
+    "slug": "fedora-40-x64",
+    "name": "40 x64",
+    "type": "base",
+    "distribution": "Fedora",
+    "public": true,
+    "status": "available",
+    "min_disk_gb": 10,
+    "regions": [
+      "sfo3"
+    ]
+  },
+  {
+    "id": 1,
+    "slug": "ubuntu-24-04-x64",
+    "name": "24.04 (LTS) x64",
+    "type": "base",
+    "distribution": "Ubuntu",
+    "public": true,
+    "status": "available",
+    "min_disk_gb": 10,
+    "regions": [
+      "nyc3",
+      "sfo3"
+    ]
+  }
+]

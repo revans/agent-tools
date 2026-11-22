@@ -1,0 +1,16 @@
+{
+  "dry_run": true,
+  "plan": {
+    "action": "db.firewall.set",
+    "summary": "replace the trusted sources of cluster \"app-db\" (the new list replaces the old one)",
+    "steps": [
+      "add:    droplets tagged web",
+      "remove: address 198.51.100.7",
+      "remove: droplet legacy-db (id 1001)"
+    ],
+    "warnings": [
+      "removing a source cuts off whatever connects from it"
+    ],
+    "monthly_cost_usd": null
+  }
+}

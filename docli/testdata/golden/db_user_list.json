@@ -1,0 +1,14 @@
+[
+  {
+    "name": "doadmin",
+    "role": "primary"
+  },
+  {
+    "name": "app",
+    "role": "normal"
+  },
+  {
+    "name": "rails",
+    "role": "normal"
+  }
+]

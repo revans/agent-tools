@@ -1,0 +1,14 @@
+[
+  {
+    "uuid": "rule-5007",
+    "type": "droplet",
+    "value": "1001",
+    "name": "legacy-db"
+  },
+  {
+    "uuid": "rule-5008",
+    "type": "ip_addr",
+    "value": "198.51.100.7",
+    "name": ""
+  }
+]

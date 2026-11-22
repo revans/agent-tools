@@ -1,0 +1,11 @@
+{
+  "name": "app-db",
+  "host": "app-db-do-user-1-0.db.ondigitalocean.com",
+  "port": 25060,
+  "private_host": "private-app-db-do-user-1-0.db.ondigitalocean.com",
+  "private_port": 25060,
+  "database": "defaultdb",
+  "user": "doadmin",
+  "ssl_mode": "require",
+  "password_file": ""
+}

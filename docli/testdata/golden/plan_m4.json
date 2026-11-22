@@ -1,0 +1,145 @@
+{
+  "stack_file": "config/deploys/stack.yml",
+  "stack": "shop",
+  "has_changes": true,
+  "summary": {
+    "create": 5,
+    "change": 0,
+    "unchanged": 0,
+    "needs_replacement": 0,
+    "orphaned": 0,
+    "unmanaged": 0,
+    "prune": 0
+  },
+  "monthly_cost_added_usd": 6,
+  "cost_unknown_for": [
+    "volume shop-data",
+    "load_balancer shop-lb"
+  ],
+  "items": [
+    {
+      "kind": "project",
+      "name": "shop-prod",
+      "action": "create",
+      "id": "",
+      "details": [
+        "name in the account: docli-shop-prod",
+        "purpose: Web Application",
+        "environment: Production",
+        "a project has no charge of its own"
+      ],
+      "monthly_cost_usd": null
+    },
+    {
+      "kind": "vpc",
+      "name": "shop-net",
+      "action": "create",
+      "id": "",
+      "details": [
+        "name in the account: docli-shop-net",
+        "region: nyc3",
+        "IP range: chosen by DigitalOcean"
+      ],
+      "monthly_cost_usd": null
+    },
+    {
+      "kind": "droplet",
+      "name": "web-1",
+      "action": "create",
+      "id": "",
+      "details": [
+        "size: s-1vcpu-1gb (1 vCPU, 1024 MB memory, 25 GB disk)",
+        "region: nyc3",
+        "image: ubuntu-24-04-x64",
+        "network: VPC shop-net",
+        "ssh keys: -",
+        "tags: docli:managed, docli:stack:shop",
+        "extras: backups=no monitoring=no ipv6=no"
+      ],
+      "monthly_cost_usd": 6
+    },
+    {
+      "kind": "volume",
+      "name": "shop-data",
+      "action": "create",
+      "id": "",
+      "details": [
+        "50 GB in nyc3",
+        "tags: docli:managed, docli:stack:shop",
+        "monthly cost is not shown: the API does not report block storage prices",
+        "attach to droplet web-1 once both exist",
+        "put it in the project shop-prod"
+      ],
+      "monthly_cost_usd": null
+    },
+    {
+      "kind": "load_balancer",
+      "name": "shop-lb",
+      "action": "create",
+      "id": "",
+      "details": [
+        "name in the account: docli-shop-lb",
+        "region: nyc3",
+        "size: the API default",
+        "algorithm: round_robin",
+        "network: VPC shop-net",
+        "targets: droplets web-1",
+        "forward http:80=http:8080  =  HTTP port 80 goes to HTTP port 8080 on the droplets",
+        "health check: http:8080/,interval=10,timeout=5,healthy=5,unhealthy=3",
+        "put it in the project shop-prod",
+        "monthly cost is not shown: the API does not report load balancer prices"
+      ],
+      "monthly_cost_usd": null
+    }
+  ],
+  "not_managed": [
+    {
+      "kind": "ssh_key",
+      "name": "robert-laptop",
+      "id": "11"
+    },
+    {
+      "kind": "vpc",
+      "name": "default-nyc3",
+      "id": "vpc-default-nyc3"
+    },
+    {
+      "kind": "vpc",
+      "name": "old-net",
+      "id": "vpc-old"
+    },
+    {
+      "kind": "firewall",
+      "name": "legacy-fw",
+      "id": "fw-legacy"
+    },
+    {
+      "kind": "droplet",
+      "name": "legacy-db",
+      "id": "1001"
+    },
+    {
+      "kind": "database",
+      "name": "legacy-pg",
+      "id": "db-legacy"
+    },
+    {
+      "kind": "project",
+      "name": "Production",
+      "id": "proj-prod"
+    },
+    {
+      "kind": "volume",
+      "name": "legacy-data",
+      "id": "vol-legacy"
+    },
+    {
+      "kind": "domain",
+      "name": "legacy.example",
+      "id": "legacy.example"
+    }
+  ],
+  "warnings": [
+    "droplet \"web-1\" has no ssh_keys: DigitalOcean will email a root password instead"
+  ]
+}

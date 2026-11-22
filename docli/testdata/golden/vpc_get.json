@@ -1,0 +1,16 @@
+{
+  "id": "vpc-default-nyc3",
+  "name": "default-nyc3",
+  "region": "nyc3",
+  "ip_range": "10.116.0.0/20",
+  "default": true,
+  "description": "",
+  "managed": false,
+  "created_at": "2025-01-01T00:00:00Z",
+  "members": [
+    {
+      "urn": "do:droplet:1001",
+      "name": "legacy-db"
+    }
+  ]
+}

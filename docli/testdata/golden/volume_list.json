@@ -1,0 +1,30 @@
+[
+  {
+    "id": "vol-legacy",
+    "name": "legacy-data",
+    "managed": false,
+    "region": "nyc3",
+    "size_gb": 100,
+    "droplet_ids": [],
+    "filesystem_type": "",
+    "filesystem_label": "",
+    "description": "",
+    "tags": [],
+    "created_at": "2025-03-01T00:00:00Z"
+  },
+  {
+    "id": "vol-5002",
+    "name": "data",
+    "managed": true,
+    "region": "nyc3",
+    "size_gb": 50,
+    "droplet_ids": [],
+    "filesystem_type": "",
+    "filesystem_label": "",
+    "description": "",
+    "tags": [
+      "docli:managed"
+    ],
+    "created_at": "2026-11-12T10:00:00Z"
+  }
+]

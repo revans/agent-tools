@@ -1,0 +1,11 @@
+{
+  "applied": true,
+  "done": [],
+  "failed": [],
+  "not_done": [],
+  "needs_replacement": [],
+  "orphaned": [
+    "db_user shop-db/app"
+  ],
+  "next_steps": []
+}

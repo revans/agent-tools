@@ -1,0 +1,15 @@
+{
+  "dry_run": true,
+  "plan": {
+    "action": "volume.create",
+    "summary": "create the 50 GB volume \"data\" in nyc3",
+    "steps": [
+      "monthly cost: not shown. The API does not report block storage prices, so docli will not guess; see DigitalOcean's pricing page",
+      "tags that will be applied: docli:managed (created if missing)",
+      "it starts unattached; attach it with: docli volume attach data DROPLET",
+      "then put it in the project \"docli-shop\" (id proj-5001)"
+    ],
+    "warnings": [],
+    "monthly_cost_usd": null
+  }
+}

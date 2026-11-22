@@ -1,0 +1,20 @@
+{
+  "dry_run": true,
+  "plan": {
+    "action": "lb.create",
+    "summary": "create the load balancer \"docli-web\" in nyc3",
+    "steps": [
+      "size: the API default",
+      "algorithm: round_robin",
+      "network: the default VPC for nyc3",
+      "targets: every droplet tagged web (now and in future)",
+      "forward http:80=http:8080  =  HTTP port 80 goes to HTTP port 8080 on the droplets",
+      "health check: http:8080/healthz,interval=10,timeout=5,healthy=5,unhealthy=3",
+      "monthly cost: not shown. The API does not report load balancer prices, so docli will not guess; see DigitalOcean's pricing page. A load balancer bills while it exists",
+      "it can be provisioned for a few minutes; add --wait to wait until it is active",
+      "ownership: the name gets the prefix docli- so docli can tell it created this load balancer"
+    ],
+    "warnings": [],
+    "monthly_cost_usd": null
+  }
+}

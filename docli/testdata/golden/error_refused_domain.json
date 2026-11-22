@@ -1,0 +1,1 @@
+{"error":"refusing to delete domain \"legacy.example\": it does not have a record in the manifest saying docli created it, so docli did not create it. Nothing was changed. If you are sure, add --force-unmanaged and type the name","exit_code":3}

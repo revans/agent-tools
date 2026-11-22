@@ -1,0 +1,117 @@
+{
+  "stack_file": "config/deploys/stack.yml",
+  "stack": "shop",
+  "has_changes": false,
+  "summary": {
+    "create": 0,
+    "change": 0,
+    "unchanged": 0,
+    "needs_replacement": 0,
+    "orphaned": 6,
+    "unmanaged": 0,
+    "prune": 0
+  },
+  "monthly_cost_added_usd": 0,
+  "cost_unknown_for": [],
+  "items": [
+    {
+      "kind": "ssh_key",
+      "name": "deploy",
+      "action": "orphaned",
+      "id": "5001",
+      "details": [
+        "docli created it and the file does not list it"
+      ],
+      "monthly_cost_usd": null
+    },
+    {
+      "kind": "vpc",
+      "name": "shop-net",
+      "action": "orphaned",
+      "id": "vpc-5002",
+      "details": [
+        "docli created it and the file does not list it"
+      ],
+      "monthly_cost_usd": null
+    },
+    {
+      "kind": "firewall",
+      "name": "shop-web",
+      "action": "orphaned",
+      "id": "fw-5003",
+      "details": [
+        "docli created it and the file does not list it",
+        "it is attached to 1 droplet(s) and 0 tag(s); they would lose this protection"
+      ],
+      "monthly_cost_usd": null
+    },
+    {
+      "kind": "droplet",
+      "name": "shop-web-1",
+      "action": "orphaned",
+      "id": "5004",
+      "details": [
+        "docli created it and the file does not list it"
+      ],
+      "monthly_cost_usd": null
+    },
+    {
+      "kind": "database",
+      "name": "shop-db",
+      "action": "orphaned",
+      "id": "db-5005",
+      "details": [
+        "docli created it and the file does not list it"
+      ],
+      "monthly_cost_usd": null
+    },
+    {
+      "kind": "domain",
+      "name": "shop.example",
+      "action": "orphaned",
+      "id": "shop.example",
+      "details": [
+        "docli created it and the file does not list it (deleting a domain removes every record in it)"
+      ],
+      "monthly_cost_usd": null
+    }
+  ],
+  "not_managed": [
+    {
+      "kind": "ssh_key",
+      "name": "robert-laptop",
+      "id": "11"
+    },
+    {
+      "kind": "vpc",
+      "name": "default-nyc3",
+      "id": "vpc-default-nyc3"
+    },
+    {
+      "kind": "vpc",
+      "name": "old-net",
+      "id": "vpc-old"
+    },
+    {
+      "kind": "firewall",
+      "name": "legacy-fw",
+      "id": "fw-legacy"
+    },
+    {
+      "kind": "droplet",
+      "name": "legacy-db",
+      "id": "1001"
+    },
+    {
+      "kind": "database",
+      "name": "legacy-pg",
+      "id": "db-legacy"
+    },
+    {
+      "kind": "domain",
+      "name": "legacy.example",
+      "id": "legacy.example"
+    }
+  ],
+  "warnings": []
+}

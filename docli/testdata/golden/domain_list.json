@@ -1,0 +1,12 @@
+[
+  {
+    "name": "legacy.example",
+    "ttl": 1800,
+    "managed": false
+  },
+  {
+    "name": "shop.example",
+    "ttl": 1800,
+    "managed": true
+  }
+]

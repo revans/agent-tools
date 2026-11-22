@@ -1,0 +1,10 @@
+{
+  "id": "proj-5001",
+  "name": "docli-shop",
+  "description": "",
+  "purpose": "Web Application",
+  "environment": "Production",
+  "default": false,
+  "managed": true,
+  "created_at": "2026-11-12T10:00:00Z"
+}

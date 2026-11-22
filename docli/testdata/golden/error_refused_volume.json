@@ -1,0 +1,1 @@
+{"error":"refusing to delete volume \"legacy-data\": it does not have the tag docli:managed, so docli did not create it. Nothing was changed. If you are sure, add --force-unmanaged and type the name","exit_code":3}

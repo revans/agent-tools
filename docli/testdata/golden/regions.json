@@ -1,0 +1,25 @@
+[
+  {
+    "slug": "ams3",
+    "name": "Amsterdam 3",
+    "available": false,
+    "features": []
+  },
+  {
+    "slug": "nyc3",
+    "name": "New York 3",
+    "available": true,
+    "features": [
+      "private_networking",
+      "backups"
+    ]
+  },
+  {
+    "slug": "sfo3",
+    "name": "San Francisco 3",
+    "available": true,
+    "features": [
+      "backups"
+    ]
+  }
+]

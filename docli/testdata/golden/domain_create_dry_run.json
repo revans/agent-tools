@@ -1,0 +1,14 @@
+{
+  "dry_run": true,
+  "plan": {
+    "action": "domain.create",
+    "summary": "add the domain \"shop.example\" to DigitalOcean DNS",
+    "steps": [
+      "this creates the DNS zone only; it does not register the domain and has no charge of its own",
+      "docli will remember it created this domain in the manifest, so it may delete it later",
+      "for DigitalOcean to answer for the domain, its nameservers at your registrar must be ns1/ns2/ns3.digitalocean.com"
+    ],
+    "warnings": [],
+    "monthly_cost_usd": null
+  }
+}

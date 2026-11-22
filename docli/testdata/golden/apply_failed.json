@@ -1,0 +1,28 @@
+{
+  "applied": false,
+  "done": [
+    "create SSH key \"docli-deploy\"",
+    "create VPC \"docli-shop-net\"",
+    "create firewall \"docli-shop-web\""
+  ],
+  "failed": [
+    {
+      "step": "create droplet \"shop-web-1\"",
+      "error": "POST http://FAKE-HOST/v2/droplets: 422 size not allowed"
+    }
+  ],
+  "not_done": [
+    "wait for droplet \"shop-web-1\" to be active",
+    "attach droplet \"shop-web-1\" to firewall \"docli-shop-web\"",
+    "create database cluster \"shop-db\"",
+    "wait for database cluster \"shop-db\" to be online",
+    "create user \"shop\" on \"shop-db\"",
+    "create database \"shop_production\" on \"shop-db\"",
+    "create domain \"shop.example\"",
+    "create A record shop.example",
+    "create CNAME record www.shop.example"
+  ],
+  "needs_replacement": [],
+  "orphaned": [],
+  "next_steps": []
+}

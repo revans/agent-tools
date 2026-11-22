@@ -1,0 +1,170 @@
+{
+  "stack_file": "config/deploys/stack.yml",
+  "stack": "shop",
+  "has_changes": true,
+  "summary": {
+    "create": 1,
+    "change": 2,
+    "unchanged": 7,
+    "needs_replacement": 0,
+    "orphaned": 1,
+    "unmanaged": 0,
+    "prune": 0
+  },
+  "monthly_cost_added_usd": 6,
+  "cost_unknown_for": [],
+  "items": [
+    {
+      "kind": "ssh_key",
+      "name": "deploy",
+      "action": "unchanged",
+      "id": "5001",
+      "details": [
+        "exists as docli-deploy"
+      ],
+      "monthly_cost_usd": null
+    },
+    {
+      "kind": "vpc",
+      "name": "shop-net",
+      "action": "unchanged",
+      "id": "vpc-5002",
+      "details": [
+        "exists as docli-shop-net"
+      ],
+      "monthly_cost_usd": null
+    },
+    {
+      "kind": "firewall",
+      "name": "shop-web",
+      "action": "unchanged",
+      "id": "fw-5003",
+      "details": [
+        "exists as docli-shop-web with the 6 rule(s) in the file"
+      ],
+      "monthly_cost_usd": null
+    },
+    {
+      "kind": "droplet",
+      "name": "shop-web-1",
+      "action": "create",
+      "id": "",
+      "details": [
+        "size: s-1vcpu-1gb (1 vCPU, 1024 MB memory, 25 GB disk)",
+        "region: nyc3",
+        "image: ubuntu-24-04-x64",
+        "network: VPC shop-net",
+        "ssh keys: deploy",
+        "tags: docli:managed, docli:stack:shop, app",
+        "extras: backups=no monitoring=yes ipv6=no",
+        "attach to firewall shop-web once it exists"
+      ],
+      "monthly_cost_usd": 6
+    },
+    {
+      "kind": "database",
+      "name": "shop-db",
+      "action": "change",
+      "id": "db-5005",
+      "details": [
+        "trust droplet:shop-web-1",
+        "stop trusting droplet:5004"
+      ],
+      "monthly_cost_usd": null
+    },
+    {
+      "kind": "db_user",
+      "name": "shop-db/shop",
+      "action": "unchanged",
+      "id": "",
+      "details": [],
+      "monthly_cost_usd": null
+    },
+    {
+      "kind": "db_user",
+      "name": "shop-db/app",
+      "action": "orphaned",
+      "id": "",
+      "details": [
+        "in the cluster but not in the file: not deleted (docli never prunes users)"
+      ],
+      "monthly_cost_usd": null
+    },
+    {
+      "kind": "db_database",
+      "name": "shop-db/shop_production",
+      "action": "unchanged",
+      "id": "",
+      "details": [],
+      "monthly_cost_usd": null
+    },
+    {
+      "kind": "domain",
+      "name": "shop.example",
+      "action": "unchanged",
+      "id": "shop.example",
+      "details": [
+        "exists; docli created it"
+      ],
+      "monthly_cost_usd": null
+    },
+    {
+      "kind": "dns_record",
+      "name": "A shop.example",
+      "action": "change",
+      "id": "5010",
+      "details": [
+        "data: 203.0.113.4 -\u003e the public IPv4 address of droplet shop-web-1 (known once it exists)"
+      ],
+      "monthly_cost_usd": null
+    },
+    {
+      "kind": "dns_record",
+      "name": "CNAME www.shop.example",
+      "action": "unchanged",
+      "id": "5011",
+      "details": [
+        "CNAME www -\u003e shop.example., TTL 1800s"
+      ],
+      "monthly_cost_usd": null
+    }
+  ],
+  "not_managed": [
+    {
+      "kind": "ssh_key",
+      "name": "robert-laptop",
+      "id": "11"
+    },
+    {
+      "kind": "vpc",
+      "name": "default-nyc3",
+      "id": "vpc-default-nyc3"
+    },
+    {
+      "kind": "vpc",
+      "name": "old-net",
+      "id": "vpc-old"
+    },
+    {
+      "kind": "firewall",
+      "name": "legacy-fw",
+      "id": "fw-legacy"
+    },
+    {
+      "kind": "droplet",
+      "name": "legacy-db",
+      "id": "1001"
+    },
+    {
+      "kind": "database",
+      "name": "legacy-pg",
+      "id": "db-legacy"
+    },
+    {
+      "kind": "domain",
+      "name": "legacy.example",
+      "id": "legacy.example"
+    }
+  ],
+  "warnings": []
+}

@@ -1,0 +1,72 @@
+{
+  "name": "shop.example",
+  "ttl": 1800,
+  "managed": true,
+  "records": [
+    {
+      "id": 5001,
+      "domain": "shop.example",
+      "type": "NS",
+      "name": "@",
+      "fqdn": "shop.example",
+      "data": "ns1.digitalocean.com.",
+      "ttl": 1800,
+      "priority": 0,
+      "flags": 0,
+      "tag": "",
+      "managed": false
+    },
+    {
+      "id": 5002,
+      "domain": "shop.example",
+      "type": "NS",
+      "name": "@",
+      "fqdn": "shop.example",
+      "data": "ns2.digitalocean.com.",
+      "ttl": 1800,
+      "priority": 0,
+      "flags": 0,
+      "tag": "",
+      "managed": false
+    },
+    {
+      "id": 5003,
+      "domain": "shop.example",
+      "type": "NS",
+      "name": "@",
+      "fqdn": "shop.example",
+      "data": "ns3.digitalocean.com.",
+      "ttl": 1800,
+      "priority": 0,
+      "flags": 0,
+      "tag": "",
+      "managed": false
+    },
+    {
+      "id": 5004,
+      "domain": "shop.example",
+      "type": "MX",
+      "name": "@",
+      "fqdn": "shop.example",
+      "data": "mail.example.net.",
+      "ttl": 1800,
+      "priority": 10,
+      "flags": 0,
+      "tag": "",
+      "managed": true
+    },
+    {
+      "id": 5005,
+      "domain": "shop.example",
+      "type": "CAA",
+      "name": "@",
+      "fqdn": "shop.example",
+      "data": "letsencrypt.org",
+      "ttl": 1800,
+      "priority": 0,
+      "flags": 0,
+      "tag": "issue",
+      "managed": true
+    }
+  ]
+}

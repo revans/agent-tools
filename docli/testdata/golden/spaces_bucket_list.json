@@ -1,0 +1,14 @@
+[
+  {
+    "name": "docli-assets",
+    "region": "nyc3",
+    "managed": true,
+    "created_at": "2026-11-12T10:00:00.000Z"
+  },
+  {
+    "name": "legacy-assets",
+    "region": "nyc3",
+    "managed": false,
+    "created_at": "2025-01-02T03:04:05.000Z"
+  }
+]

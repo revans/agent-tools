@@ -1,0 +1,13 @@
+{
+  "id": 5004,
+  "domain": "shop.example",
+  "type": "MX",
+  "name": "@",
+  "fqdn": "shop.example",
+  "data": "mail.example.net.",
+  "ttl": 1800,
+  "priority": 10,
+  "flags": 0,
+  "tag": "",
+  "managed": true
+}

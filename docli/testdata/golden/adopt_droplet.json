@@ -1,0 +1,7 @@
+{
+  "adopted": true,
+  "kind": "droplet",
+  "name": "legacy-db",
+  "id": "1001",
+  "api_changed": true
+}

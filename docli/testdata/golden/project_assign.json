@@ -1,0 +1,8 @@
+{
+  "assigned": true,
+  "project_id": "proj-5001",
+  "project_name": "docli-shop",
+  "resources": [
+    "do:volume:vol-5002"
+  ]
+}

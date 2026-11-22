@@ -1,0 +1,39 @@
+[
+  {
+    "id": "lb-5004",
+    "name": "docli-web",
+    "managed": true,
+    "ip": "203.0.113.201",
+    "status": "active",
+    "region": "nyc3",
+    "size": "lb-small",
+    "size_unit": 0,
+    "algorithm": "round_robin",
+    "vpc_id": "vpc-default-nyc3",
+    "forwarding_rules": [
+      {
+        "entry_protocol": "http",
+        "entry_port": 80,
+        "target_protocol": "http",
+        "target_port": 8080,
+        "certificate_id": "",
+        "tls_passthrough": false,
+        "spec": "http:80=http:8080"
+      }
+    ],
+    "health_check": {
+      "protocol": "http",
+      "port": 8080,
+      "path": "/healthz",
+      "interval_seconds": 10,
+      "timeout_seconds": 5,
+      "healthy_threshold": 5,
+      "unhealthy_threshold": 3,
+      "spec": "http:8080/healthz,interval=10,timeout=5,healthy=5,unhealthy=3"
+    },
+    "droplet_ids": [],
+    "tag": "web",
+    "redirect_http_to_https": false,
+    "created_at": "2026-11-12T10:00:00Z"
+  }
+]

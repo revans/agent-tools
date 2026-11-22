@@ -1,0 +1,4 @@
+/docli
+/dist/
+*.test
+*.out

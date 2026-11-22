@@ -1,0 +1,15 @@
+{
+  "file": "config/deploys/stack.yml",
+  "valid": true,
+  "stack": "shop",
+  "counts": {
+    "databases": 1,
+    "dns_records": 2,
+    "domains": 1,
+    "droplets": 1,
+    "firewalls": 1,
+    "ssh_keys": 1,
+    "vpcs": 1
+  },
+  "notes": []
+}

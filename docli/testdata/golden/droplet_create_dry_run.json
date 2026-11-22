@@ -1,0 +1,20 @@
+{
+  "dry_run": true,
+  "plan": {
+    "action": "droplet.create",
+    "summary": "create droplet \"web-1\" in nyc3",
+    "steps": [
+      "size: s-1vcpu-1gb (1 vCPU, 1024 MB memory, 25 GB disk): $6.00/month, $0.00893/hour",
+      "image: ubuntu-24-04-x64",
+      "network: the default VPC for nyc3",
+      "ssh keys: -",
+      "tags that will be applied: docli:managed, docli:stack:blog (created if missing)",
+      "extras: backups=yes monitoring=no ipv6=no",
+      "backups add about $1.20/month (20% of the size price; an estimate, the API does not report it)"
+    ],
+    "warnings": [
+      "no SSH key: DigitalOcean will email a root password instead"
+    ],
+    "monthly_cost_usd": 7.2
+  }
+}

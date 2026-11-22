@@ -1,0 +1,55 @@
+{
+  "stack_file": "config/deploys/stack.yml",
+  "stack": "",
+  "has_changes": false,
+  "summary": {
+    "create": 0,
+    "change": 0,
+    "unchanged": 0,
+    "needs_replacement": 0,
+    "orphaned": 0,
+    "unmanaged": 0,
+    "prune": 0
+  },
+  "monthly_cost_added_usd": 0,
+  "cost_unknown_for": [],
+  "items": [],
+  "not_managed": [
+    {
+      "kind": "ssh_key",
+      "name": "robert-laptop",
+      "id": "11"
+    },
+    {
+      "kind": "vpc",
+      "name": "default-nyc3",
+      "id": "vpc-default-nyc3"
+    },
+    {
+      "kind": "vpc",
+      "name": "old-net",
+      "id": "vpc-old"
+    },
+    {
+      "kind": "firewall",
+      "name": "legacy-fw",
+      "id": "fw-legacy"
+    },
+    {
+      "kind": "droplet",
+      "name": "legacy-db",
+      "id": "1001"
+    },
+    {
+      "kind": "database",
+      "name": "legacy-pg",
+      "id": "db-legacy"
+    },
+    {
+      "kind": "domain",
+      "name": "legacy.example",
+      "id": "legacy.example"
+    }
+  ],
+  "warnings": []
+}

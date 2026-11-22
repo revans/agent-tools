@@ -1,0 +1,17 @@
+{
+  "dry_run": true,
+  "plan": {
+    "action": "db.create",
+    "summary": "create PostgreSQL 16 cluster \"app-db\" in nyc3",
+    "steps": [
+      "size: db-s-1vcpu-1gb x 2 node(s)",
+      "network: VPC default-nyc3 (10.116.0.0/20); the private host name is only reachable from inside it",
+      "trusted sources: droplet legacy-db (id 1001)",
+      "tags that will be applied: docli:managed (created if missing)",
+      "creation takes several minutes; add --wait to wait for it, or run: docli db wait app-db",
+      "price: $15.00 per node per month x 2 node(s) (taken from the API's size list; storage and extras are not included)"
+    ],
+    "warnings": [],
+    "monthly_cost_usd": 30
+  }
+}

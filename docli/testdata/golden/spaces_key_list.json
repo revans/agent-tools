@@ -1,0 +1,28 @@
+[
+  {
+    "name": "legacy-key",
+    "access_key_id": "DO00LEGACYKEY000000",
+    "grants": [
+      {
+        "bucket": "legacy-assets",
+        "permission": "read"
+      }
+    ],
+    "managed": false,
+    "created_at": "2025-01-03T00:00:00Z",
+    "secret_file": ""
+  },
+  {
+    "name": "docli-ci",
+    "access_key_id": "DO00NEWKEY00005005",
+    "grants": [
+      {
+        "bucket": "docli-assets",
+        "permission": "read"
+      }
+    ],
+    "managed": true,
+    "created_at": "2026-11-12T10:00:00Z",
+    "secret_file": ""
+  }
+]

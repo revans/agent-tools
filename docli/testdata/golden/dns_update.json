@@ -1,0 +1,13 @@
+{
+  "id": 5005,
+  "domain": "shop.example",
+  "type": "CAA",
+  "name": "@",
+  "fqdn": "shop.example",
+  "data": "letsencrypt.org",
+  "ttl": 600,
+  "priority": 0,
+  "flags": 0,
+  "tag": "issue",
+  "managed": true
+}
