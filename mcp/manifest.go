@@ -38,6 +38,9 @@ type Param struct {
 	Positional  bool     `toml:"positional"` // passed after "--", in manifest order
 	Required    bool     `toml:"required"`
 	Enum        []string `toml:"enum"`
+	// Example is a realistic value. It is offered to the model as a JSON Schema
+	// example, and the conformance test uses it in place of a placeholder.
+	Example string `toml:"example"`
 }
 
 // Tool is one MCP tool: a fixed CLI invocation plus the parameters the model
@@ -209,6 +212,9 @@ func (t *Tool) inputSchema() map[string]any {
 		}
 		if len(p.Enum) > 0 {
 			s["enum"] = p.Enum
+		}
+		if p.Example != "" {
+			s["examples"] = []any{p.Example}
 		}
 		props[p.Name] = s
 		if p.Required {

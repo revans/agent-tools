@@ -69,6 +69,8 @@ func TestEveryManifestFlagExistsInTheRealCLI(t *testing.T) {
 				default:
 					if len(p.Enum) > 0 {
 						args[p.Name] = p.Enum[0]
+					} else if p.Example != "" {
+						args[p.Name] = p.Example
 					} else {
 						args[p.Name] = "sample1"
 					}
