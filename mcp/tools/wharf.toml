@@ -1,0 +1,140 @@
+# wharf: SFTP deployment for static sites. wharf reads .wharf from the working
+# directory (or a parent), which is the directory the MCP client launched in.
+# Deliberately left out of v1: sync, delete, move, archive, chmod, restore.
+# They prompt for confirmation, and a model cannot answer a prompt.
+
+[[tool]]
+name = "wharf_sync_plan"
+description = "Show which local files are new or changed compared to the remote site, without uploading anything. Connects to the server to compare."
+bin = "wharf"
+args = ["sync", "--dry-run"]
+safety = "read"
+timeout = "180s"
+
+[[tool]]
+name = "wharf_diff"
+description = "Unified diff of the server's copy of a file against a local file."
+bin = "wharf"
+args = ["diff"]
+safety = "read"
+  [[tool.param]]
+  name = "local_file"
+  type = "string"
+  positional = true
+  required = true
+  description = "Path of the local file, relative to the site repo."
+
+[[tool]]
+name = "wharf_cat"
+description = "Print a remote file's contents."
+bin = "wharf"
+args = ["cat"]
+safety = "read"
+  [[tool.param]]
+  name = "remote_file"
+  type = "string"
+  positional = true
+  required = true
+  description = "Remote path of the file."
+
+[[tool]]
+name = "wharf_prune_list"
+description = "List remote files that have no local counterpart. Never deletes anything."
+bin = "wharf"
+args = ["prune"]
+safety = "read"
+timeout = "180s"
+
+[[tool]]
+name = "wharf_verify"
+description = "Request each deployed file's public URL and report the failures."
+bin = "wharf"
+args = ["verify"]
+safety = "read"
+timeout = "180s"
+  [[tool.param]]
+  name = "base_url"
+  type = "string"
+  flag = "--base-url"
+  description = "Public site URL. Defaults to base_url in .wharf."
+
+[[tool]]
+name = "wharf_restore_list"
+description = "List the local pre-overwrite backups that wharf restore could use. Needs no connection."
+bin = "wharf"
+args = ["restore", "--list"]
+safety = "read"
+  [[tool.param]]
+  name = "remote_path"
+  type = "string"
+  positional = true
+  description = "Remote path to list backups for."
+
+[[tool]]
+name = "wharf_explore"
+description = "Walk the remote SFTP tree and write WHARF.md at the repo root (a local file; the server is not changed)."
+bin = "wharf"
+args = ["explore"]
+safety = "write"
+timeout = "300s"
+
+[[tool]]
+name = "wharf_copy"
+description = "Upload one local file to the server, mirroring its repo-relative path. An existing remote file is backed up locally first. Set dry_run to preview."
+bin = "wharf"
+args = ["copy"]
+safety = "write"
+timeout = "180s"
+  [[tool.param]]
+  name = "dry_run"
+  type = "boolean"
+  flag = "--dry-run"
+  description = "Show what would happen and change nothing."
+  [[tool.param]]
+  name = "local_file"
+  type = "string"
+  positional = true
+  required = true
+  description = "Path of the local file, relative to the site repo."
+
+[[tool]]
+name = "wharf_pull"
+description = "Download a remote file or directory into the local repo. Never overwrites existing local files unless force is set."
+bin = "wharf"
+args = ["pull"]
+safety = "write"
+timeout = "300s"
+  [[tool.param]]
+  name = "force"
+  type = "boolean"
+  flag = "--force"
+  description = "Overwrite existing local files."
+  [[tool.param]]
+  name = "dry_run"
+  type = "boolean"
+  flag = "--dry-run"
+  description = "Show the plan and download nothing."
+  [[tool.param]]
+  name = "remote_path"
+  type = "string"
+  positional = true
+  required = true
+  description = "Remote file or directory. Use . for the whole site."
+  [[tool.param]]
+  name = "local_path"
+  type = "string"
+  positional = true
+  description = "Where to put it locally. Defaults to mirroring the repo layout."
+
+[[tool]]
+name = "wharf_mkdir"
+description = "Create a remote directory, and its parents."
+bin = "wharf"
+args = ["mkdir"]
+safety = "write"
+  [[tool.param]]
+  name = "remote_path"
+  type = "string"
+  positional = true
+  required = true
+  description = "Remote directory to create."

@@ -1,0 +1,140 @@
+# docli: DigitalOcean. Read tools plus `plan`. The token comes from the
+# environment or ~/.config/docli/token, never from a tool argument.
+# docli itself asks before changing anything, and a model cannot answer, so
+# mutating commands are not exposed here. Add them to a manifest in
+# ~/.config/agent-tools-mcp/tools.d/ when you want them, with safety = "write".
+
+[[tool]]
+name = "docli_token_check"
+description = "Check the DigitalOcean token and what it can read."
+bin = "docli"
+args = ["token", "check", "--json"]
+safety = "read"
+
+[[tool]]
+name = "docli_droplet_list"
+description = "List droplets, optionally filtered by tag, VPC or region."
+bin = "docli"
+args = ["droplet", "list", "--json"]
+safety = "read"
+  [[tool.param]]
+  name = "tag"
+  type = "string"
+  flag = "--tag"
+  description = "Only droplets with this tag."
+  [[tool.param]]
+  name = "vpc"
+  type = "string"
+  flag = "--vpc"
+  description = "Only droplets in this VPC (name or id)."
+  [[tool.param]]
+  name = "region"
+  type = "string"
+  flag = "--region"
+  description = "Region slug, e.g. nyc3."
+
+[[tool]]
+name = "docli_droplet_get"
+description = "Show one droplet by name or id."
+bin = "docli"
+args = ["droplet", "get", "--json"]
+safety = "read"
+  [[tool.param]]
+  name = "droplet"
+  type = "string"
+  positional = true
+  required = true
+  description = "Droplet name or id."
+
+[[tool]]
+name = "docli_domain_list"
+description = "List domains on the account."
+bin = "docli"
+args = ["domain", "list", "--json"]
+safety = "read"
+
+[[tool]]
+name = "docli_dns_list"
+description = "List the DNS records of a domain, optionally by type or name."
+bin = "docli"
+args = ["dns", "list", "--json"]
+safety = "read"
+  [[tool.param]]
+  name = "type"
+  type = "string"
+  flag = "--type"
+  description = "Record type, e.g. A."
+  [[tool.param]]
+  name = "name"
+  type = "string"
+  flag = "--name"
+  description = "Record name, relative to the domain (www, or @ for the apex)."
+  [[tool.param]]
+  name = "domain"
+  type = "string"
+  positional = true
+  required = true
+  description = "Domain, e.g. example.com."
+
+[[tool]]
+name = "docli_vpc_list"
+description = "List VPCs."
+bin = "docli"
+args = ["vpc", "list", "--json"]
+safety = "read"
+
+[[tool]]
+name = "docli_firewall_list"
+description = "List firewalls."
+bin = "docli"
+args = ["firewall", "list", "--json"]
+safety = "read"
+
+[[tool]]
+name = "docli_ssh_key_list"
+description = "List SSH keys on the account."
+bin = "docli"
+args = ["ssh-key", "list", "--json"]
+safety = "read"
+
+[[tool]]
+name = "docli_db_list"
+description = "List managed database clusters."
+bin = "docli"
+args = ["db", "list", "--json"]
+safety = "read"
+
+[[tool]]
+name = "docli_sizes"
+description = "List droplet sizes you can create."
+bin = "docli"
+args = ["sizes", "--json"]
+safety = "read"
+
+[[tool]]
+name = "docli_regions"
+description = "List regions you can create resources in."
+bin = "docli"
+args = ["regions", "--json"]
+safety = "read"
+
+[[tool]]
+name = "docli_images"
+description = "List images you can create droplets from."
+bin = "docli"
+args = ["images", "--json"]
+safety = "read"
+
+[[tool]]
+name = "docli_plan"
+description = "Read the stack file in the current directory and the account, and say what apply would create, change or leave alone, with the added monthly cost. Changes nothing. Exit code 2 means there are changes; that is a normal result."
+bin = "docli"
+args = ["plan", "--json"]
+ok_exit = [0, 2]
+safety = "read"
+timeout = "120s"
+  [[tool.param]]
+  name = "file"
+  type = "string"
+  flag = "--file"
+  description = "Stack file path. Defaults to the one in the current directory."

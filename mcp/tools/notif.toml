@@ -1,0 +1,228 @@
+# Slack and Telegram notification tools (notif-slack, notif-tg).
+# Accounts, channels and tokens live in each CLI's own config file, never here.
+
+[[tool]]
+name = "slack_post"
+description = "Post a message to a Slack channel. Give literal Markdown in `text`, or a `template` name with `vars`. Account and channel are keys from notif-slack's config (use slack_channels to list them). Set dry_run to preview without sending."
+bin = "notif-slack"
+args = ["post", "--json"]
+safety = "write"
+  [[tool.param]]
+  name = "account"
+  type = "string"
+  flag = "--account"
+  description = "Account key from the config, e.g. gierd."
+  [[tool.param]]
+  name = "channel"
+  type = "string"
+  flag = "--channel"
+  required = true
+  description = "Channel key from the config, or a raw C... id or #name."
+  [[tool.param]]
+  name = "text"
+  type = "string"
+  flag = "--text"
+  description = "Literal Markdown to post. Use this or template."
+  [[tool.param]]
+  name = "template"
+  type = "string"
+  flag = "--template"
+  description = "Template name (see slack_templates). Use this or text."
+  [[tool.param]]
+  name = "vars"
+  type = "map"
+  flag = "--var"
+  description = "Template variables as an object of strings, e.g. {\"service\": \"api\"}."
+  [[tool.param]]
+  name = "thread"
+  type = "string"
+  flag = "--thread"
+  description = "Reply inside a thread: the parent message ts."
+  [[tool.param]]
+  name = "dry_run"
+  type = "boolean"
+  flag = "--dry-run"
+  description = "Print what would be sent and send nothing."
+
+[[tool]]
+name = "slack_read"
+description = "Read the most recent messages from a Slack channel."
+bin = "notif-slack"
+args = ["read", "--json"]
+safety = "read"
+  [[tool.param]]
+  name = "account"
+  type = "string"
+  flag = "--account"
+  description = "Account key from the config."
+  [[tool.param]]
+  name = "channel"
+  type = "string"
+  flag = "--channel"
+  required = true
+  description = "Channel key from the config, or a raw C... id or #name."
+  [[tool.param]]
+  name = "limit"
+  type = "integer"
+  flag = "--limit"
+  description = "How many recent messages to fetch (default 20)."
+  [[tool.param]]
+  name = "since"
+  type = "string"
+  flag = "--since"
+  description = "Oldest message to show: a Slack ts or an ISO-8601 date or datetime."
+  [[tool.param]]
+  name = "until"
+  type = "string"
+  flag = "--until"
+  description = "Newest message to show: a Slack ts or an ISO-8601 date or datetime."
+
+[[tool]]
+name = "slack_thread"
+description = "Read one Slack thread, parent message first. Takes a message ts or a Slack permalink."
+bin = "notif-slack"
+args = ["thread", "--json"]
+safety = "read"
+  [[tool.param]]
+  name = "account"
+  type = "string"
+  flag = "--account"
+  description = "Account key from the config."
+  [[tool.param]]
+  name = "channel"
+  type = "string"
+  flag = "--channel"
+  description = "Channel key; not needed when given a permalink."
+  [[tool.param]]
+  name = "limit"
+  type = "integer"
+  flag = "--limit"
+  description = "How many messages of the thread to fetch (default 100)."
+  [[tool.param]]
+  name = "thread"
+  type = "string"
+  positional = true
+  required = true
+  description = "The parent message ts, or a Slack permalink to any message in the thread."
+
+[[tool]]
+name = "slack_channels"
+description = "List the Slack channels configured for an account, or for every account when none is given."
+bin = "notif-slack"
+args = ["channels", "--json"]
+safety = "read"
+  [[tool.param]]
+  name = "account"
+  type = "string"
+  positional = true
+  description = "Account key."
+
+[[tool]]
+name = "slack_accounts"
+description = "List the Slack accounts in the notif-slack config."
+bin = "notif-slack"
+args = ["accounts", "--json"]
+safety = "read"
+
+[[tool]]
+name = "slack_templates"
+description = "List the Markdown templates available to slack_post."
+bin = "notif-slack"
+args = ["templates", "--json"]
+safety = "read"
+
+[[tool]]
+name = "tg_post"
+description = "Send a message to a Telegram chat. Give literal Markdown in `text`, or a `template` name with `vars`. Account and chat are keys from notif-tg's config (use tg_chats to list them). Set dry_run to preview without sending."
+bin = "notif-tg"
+args = ["post", "--json"]
+safety = "write"
+  [[tool.param]]
+  name = "account"
+  type = "string"
+  flag = "--account"
+  description = "Bot account key from the config."
+  [[tool.param]]
+  name = "chat"
+  type = "string"
+  flag = "--chat"
+  required = true
+  description = "Chat key from the config, or a raw numeric id or @channelusername."
+  [[tool.param]]
+  name = "text"
+  type = "string"
+  flag = "--text"
+  description = "Literal Markdown to send. Use this or template."
+  [[tool.param]]
+  name = "template"
+  type = "string"
+  flag = "--template"
+  description = "Template name (see tg_templates). Use this or text."
+  [[tool.param]]
+  name = "vars"
+  type = "map"
+  flag = "--var"
+  description = "Template variables as an object of strings."
+  [[tool.param]]
+  name = "reply_to"
+  type = "string"
+  flag = "--reply-to"
+  description = "Message id to reply to."
+  [[tool.param]]
+  name = "silent"
+  type = "boolean"
+  flag = "--silent"
+  description = "Deliver without a notification sound."
+  [[tool.param]]
+  name = "dry_run"
+  type = "boolean"
+  flag = "--dry-run"
+  description = "Print what would be sent and send nothing."
+
+[[tool]]
+name = "tg_read"
+description = "Read messages sent to a Telegram bot. This is read-only: it peeks, so the same messages can be read again."
+bin = "notif-tg"
+args = ["read", "--json", "--peek"]
+safety = "read"
+  [[tool.param]]
+  name = "account"
+  type = "string"
+  flag = "--account"
+  description = "Bot account key from the config."
+  [[tool.param]]
+  name = "chat"
+  type = "string"
+  flag = "--chat"
+  description = "Show only messages from this chat."
+  [[tool.param]]
+  name = "limit"
+  type = "integer"
+  flag = "--limit"
+  description = "Maximum messages to fetch, 1 to 100 (default 20)."
+
+[[tool]]
+name = "tg_chats"
+description = "List the Telegram chats configured for a bot account."
+bin = "notif-tg"
+args = ["chats", "--json"]
+safety = "read"
+  [[tool.param]]
+  name = "account"
+  type = "string"
+  positional = true
+  description = "Bot account key."
+
+[[tool]]
+name = "tg_accounts"
+description = "List the Telegram bot accounts in the notif-tg config."
+bin = "notif-tg"
+args = ["accounts", "--json"]
+safety = "read"
+
+[[tool]]
+name = "tg_templates"
+description = "List the Markdown templates available to tg_post."
+bin = "notif-tg"
+args = ["templates", "--json"]
+safety = "read"

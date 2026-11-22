@@ -18,7 +18,7 @@ TARGET  := $(ROOT)/target/release
 .DEFAULT_GOAL := build
 DOCLI_VERSION ?= $(or $(shell git describe --tags --match 'v*' --always --dirty 2>/dev/null | sed 's/^v//'),dev)
 
-.PHONY: all build debug $(CRATES) wharf docli test-docli install-docli uninstall-docli test-wharf install-wharf uninstall-wharf test lint fmt fmt-check check install uninstall skills unskills clean distclean help
+.PHONY: all build debug $(CRATES) wharf docli test-docli install-docli uninstall-docli mcp test-mcp install-mcp uninstall-mcp mcp-register mcp-unregister test-wharf install-wharf uninstall-wharf test lint fmt fmt-check check install uninstall skills unskills clean distclean help
 
 all: build
 
@@ -26,6 +26,7 @@ build: ## Build every binary in release mode
 	$(CARGO) build --release --workspace
 	$(MAKE) wharf
 	$(MAKE) docli
+	$(MAKE) mcp
 
 debug: ## Build every binary in debug mode
 	$(CARGO) build --workspace
@@ -55,10 +56,39 @@ install-docli: docli ## Install docli into PREFIX/bin
 uninstall-docli: ## Remove docli from PREFIX/bin
 	@rm -f "$(PREFIX)/bin/docli"
 
+mcp: ## Build only the MCP server (agent-tools-mcp)
+	@mkdir -p "$(TARGET)"
+	cd "$(ROOT)/mcp" && $(GO) build -o "$(TARGET)/agent-tools-mcp" .
+
+test-mcp: ## Vet and test the MCP server
+	cd "$(ROOT)/mcp" && $(GO) vet ./... && $(GO) test ./...
+
+install-mcp: mcp ## Install agent-tools-mcp into PREFIX/bin
+	@mkdir -p "$(PREFIX)/bin"
+	install -m 0755 "$(TARGET)/agent-tools-mcp" "$(PREFIX)/bin/agent-tools-mcp"
+	@echo "installed agent-tools-mcp -> $(PREFIX)/bin/agent-tools-mcp"
+
+uninstall-mcp: ## Remove agent-tools-mcp from PREFIX/bin
+	@rm -f "$(PREFIX)/bin/agent-tools-mcp"
+
+mcp-register: install ## Register the MCP server with whichever of claude, codex and grok are installed
+	@for c in claude codex grok; do \
+		if command -v $$c >/dev/null 2>&1; then \
+			if [ $$c = claude ]; then $$c mcp add --scope user agent-tools -- "$(PREFIX)/bin/agent-tools-mcp"; \
+			else $$c mcp add agent-tools -- "$(PREFIX)/bin/agent-tools-mcp"; fi \
+			&& echo "registered with $$c" || echo "could not register with $$c (already added? try make mcp-unregister)"; \
+		else echo "$$c not installed, skipped"; fi; \
+	done
+
+mcp-unregister: ## Remove the MCP server from claude, codex and grok
+	@for c in claude codex grok; do \
+		if command -v $$c >/dev/null 2>&1; then $$c mcp remove agent-tools >/dev/null 2>&1 && echo "removed from $$c" || echo "not registered with $$c"; fi; \
+	done
+
 test-wharf: ## Vet and test wharf
 	cd "$(ROOT)/wharf" && $(GO) vet ./... && $(GO) test ./...
 
-test: test-wharf test-docli ## Run the test suite
+test: test-wharf test-docli test-mcp ## Run the test suite
 	$(CARGO) test --workspace
 
 lint: ## Run clippy, treating warnings as errors
@@ -72,7 +102,7 @@ fmt-check: ## Fail if the source is not formatted
 
 check: fmt-check lint test ## Everything CI would run
 
-install: install-wharf install-docli ## Install every binary into PREFIX/bin (default ~/.cargo/bin)
+install: install-wharf install-docli install-mcp ## Install every binary into PREFIX/bin (default ~/.cargo/bin)
 	@for c in $(CRATES); do \
 		echo "installing $$c -> $(PREFIX)/bin/$$c"; \
 		$(CARGO) install --path "$(ROOT)/$$c" --root "$(PREFIX)" --locked --force || exit 1; \
@@ -92,6 +122,7 @@ uninstall: ## Remove every binary from PREFIX/bin
 	done
 	@$(MAKE) uninstall-wharf
 	@$(MAKE) uninstall-docli
+	@$(MAKE) uninstall-mcp
 
 skills: ## Symlink the Claude Code skills into SKILLS_DIR
 	@mkdir -p "$(SKILLS_DIR)"
