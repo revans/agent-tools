@@ -371,3 +371,71 @@ func sendText(r *apikit.Run, endpoint, idParam, id, message string) (any, error)
 	}
 	return map[string]any{"id": out, "account": r.AccountName()}, nil
 }
+
+// ---- metrics ----
+
+// metricsCommand reads one post's numbers. The counts (likes, comments) come from
+// the media object and need no extra permission. The insights (views, reach, saved,
+// shares) need instagram_business_manage_insights and are read separately: if Meta
+// refuses them the counts are still returned, with the reason beside them, so one
+// missing permission does not cost the numbers that are available.
+func metricsCommand() *apikit.Command {
+	return &apikit.Command{
+		Name:    "metrics",
+		Summary: "read a post's numbers: likes, comments, and (with permission) views, reach, saves, shares",
+		Usage:   "metrics MEDIA_ID",
+		Run: func(r *apikit.Run) (any, error) {
+			if len(r.Args) != 1 {
+				return nil, apikit.Usage("metrics needs exactly one media id")
+			}
+			id, err := validateObjectID("MEDIA_ID", r.Args[0])
+			if err != nil {
+				return nil, err
+			}
+			counts, err := r.Call("media_fields", map[string]string{"media_id": id})
+			if err != nil {
+				return nil, mapError(err, false)
+			}
+			if r.DryRun() {
+				ins, err := r.Call("media_insights", map[string]string{"media_id": id})
+				if err != nil {
+					return nil, err
+				}
+				return map[string]any{"dry_run": true, "steps": []any{counts.Data, ins.Data}}, nil
+			}
+			out := map[string]any{}
+			if m, ok := counts.Raw.(map[string]any); ok {
+				for _, k := range []string{"like_count", "comments_count", "media_type", "permalink"} {
+					if v, ok := m[k]; ok {
+						out[k] = v
+					}
+				}
+			}
+			ins, err := r.Call("media_insights", map[string]string{"media_id": id})
+			if err != nil {
+				out["insights_error"] = mapError(err, false).Error()
+				return out, nil
+			}
+			m, _ := ins.Raw.(map[string]any)
+			list, _ := m["data"].([]any)
+			for _, it := range list {
+				row, _ := it.(map[string]any)
+				name, _ := row["name"].(string)
+				if name == "" {
+					continue
+				}
+				// older answers use values[0].value, newer ones total_value.value
+				if vals, ok := row["values"].([]any); ok && len(vals) > 0 {
+					if v, ok := vals[0].(map[string]any); ok && v["value"] != nil {
+						out[name] = v["value"]
+						continue
+					}
+				}
+				if tv, ok := row["total_value"].(map[string]any); ok && tv["value"] != nil {
+					out[name] = tv["value"]
+				}
+			}
+			return out, nil
+		},
+	}
+}

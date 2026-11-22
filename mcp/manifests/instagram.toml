@@ -131,3 +131,22 @@ safety = "read"
   type = "string"
   positional = true
   description = "Describe this one endpoint. Omit to list all."
+
+[[tool]]
+name = "instagram_metrics"
+description = "Read one Instagram post's numbers: like_count and comments_count, and, if the token has the insights permission, views, reach, saved and shares. If insights are refused the counts are still returned with insights_error beside them. Read-only. Use posts_refresh to store readings in the post log."
+bin = "instagram"
+args = ["metrics"]
+safety = "read"
+  [[tool.param]]
+  name = "media_id"
+  type = "string"
+  positional = true
+  required = true
+  example = "17900000000000001"
+  description = "The numeric media id, as returned by instagram_post."
+  [[tool.param]]
+  name = "account"
+  type = "string"
+  flag = "--account"
+  description = "Account name from the instagram config."

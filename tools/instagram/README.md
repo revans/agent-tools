@@ -142,6 +142,18 @@ comment and reply only, code 10 (the token lacks a permission: names the scopes)
 | Live human confirmation before each call, activity log of posts | **not included** | The CLI has `--dry-run`; the MCP tools are marked `destructive` so the server can require confirmation. No post log is kept |
 | Optional `media_description`, `original_comment_*` shown in the confirmation | **not included** | Belongs to Mimir's confirmation UI |
 
+## Reading a post's numbers
+
+`instagram metrics MEDIA_ID` reads `like_count` and `comments_count`, with the media
+type and permalink, from the media object, which needs no extra permission. It then
+asks for the insights `views`, `reach`, `saved` and `shares`, which need the
+`instagram_business_manage_insights` permission. If Meta refuses them, the counts
+are still returned with `insights_error` beside them. The owner can hide likes, in
+which case the field is simply absent. `posts refresh` runs it for you, and `posts`
+reports on the result as views, likes, comments, shares and saves. The fields come
+from Meta's IG Media and IG Media Insights references; this has never run against
+the live API, and which insight metrics apply varies by media type.
+
 ## The post log
 
 Every successful post, comment and reply is recorded in the post log (see [posts](../posts/README.md)),

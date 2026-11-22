@@ -56,7 +56,7 @@ func service() *apikit.Service {
 		UserAgent: "agent-tools-instagram/" + version,
 		NewClient: newClient,
 		Check:     check,
-		Commands:  []*apikit.Command{postCommand(), commentCommand(), replyCommand()},
+		Commands:  []*apikit.Command{postCommand(), commentCommand(), replyCommand(), metricsCommand()},
 	}
 }
 

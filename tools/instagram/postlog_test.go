@@ -138,3 +138,74 @@ func TestAnUnwritableLedgerNeverHidesASuccessfulPublish(t *testing.T) {
 		t.Errorf("stderr says it went out and could not be logged: %q", errs)
 	}
 }
+
+func TestMetricsReadsTheCountsAndTheInsights(t *testing.T) {
+	f := newFake(t)
+	run := setup(t, f, "")
+	code, out, errs := run("metrics", "17900000000000001")
+	if code != 0 {
+		t.Fatalf("%d %s", code, errs)
+	}
+	m := decode(t, out)
+	for k, want := range map[string]float64{"like_count": 12, "comments_count": 3, "views": 80, "reach": 60, "saved": 3, "shares": 1} {
+		if got, _ := m[k].(float64); got != want {
+			t.Errorf("%s = %v, want %v (%v)", k, m[k], want, m)
+		}
+	}
+	if m["media_type"] != "IMAGE" || m["permalink"] != "https://www.instagram.com/p/ABC/" || m["insights_error"] != nil {
+		t.Errorf("type and link come along, with no error: %v", m)
+	}
+	var sawFields, sawInsights bool
+	for _, r := range f.reqs {
+		if r.Method != "GET" {
+			continue
+		}
+		noToken(t, r)
+		if strings.HasSuffix(r.Path, "/insights") {
+			sawInsights = strings.Contains(r.RawQuery, "metric=views%2Creach%2Csaved%2Cshares")
+		} else if strings.Contains(r.Path, "1790") {
+			sawFields = strings.Contains(r.RawQuery, "fields=like_count%2Ccomments_count%2Cmedia_type%2Cpermalink")
+		}
+	}
+	if !sawFields || !sawInsights {
+		t.Errorf("the requests: fields=%v insights=%v %v", sawFields, sawInsights, f.paths())
+	}
+}
+
+func TestMetricsKeepsTheCountsWhenInsightsAreRefused(t *testing.T) {
+	f := newFake(t)
+	f.insightsErr = `{"error":{"message":"(#10) Application does not have permission for this action","code":10}}`
+	run := setup(t, f, "")
+	code, out, errs := run("metrics", "17900000000000001")
+	if code != 0 {
+		t.Fatalf("a refused insights call must not fail the command: %d %s", code, errs)
+	}
+	m := decode(t, out)
+	if m["like_count"].(float64) != 12 || m["comments_count"].(float64) != 3 {
+		t.Errorf("the counts are still returned: %v", m)
+	}
+	if e, _ := m["insights_error"].(string); !strings.Contains(e, "permission") {
+		t.Errorf("and the reason sits beside them: %v", m)
+	}
+	if m["views"] != nil {
+		t.Error("no insight numbers are invented")
+	}
+}
+
+func TestMetricsFailsWhenTheCountsCannotBeRead(t *testing.T) {
+	f := newFake(t)
+	f.mediaErr = `{"error":{"message":"Unsupported get request. Object does not exist","code":100}}`
+	run := setup(t, f, "")
+	if code, _, errs := run("metrics", "17900000000000001"); code != 1 || errs == "" {
+		t.Errorf("no counts, no result: %d %q", code, errs)
+	}
+	for name, args := range map[string][]string{"no id": {"metrics"}, "two ids": {"metrics", "1", "2"}, "not numeric": {"metrics", "abc"}} {
+		if code, _, _ := run(args...); code != 2 && code != 1 {
+			t.Errorf("%s: %d", name, code)
+		}
+	}
+	code, out, _ := run("metrics", "17900000000000001", "--dry-run")
+	if code != 0 || !strings.Contains(out, `"dry_run":true`) {
+		t.Errorf("dry run: %d %s", code, out)
+	}
+}

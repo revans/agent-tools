@@ -109,3 +109,34 @@ body = "json"
   in = "body"
   required = true
   description = "Reply text, up to 2200 characters."
+
+# Reading a post's numbers. The counts need no extra permission; insights do.
+[[endpoint]]
+name = "media_fields"
+description = "A media object's public counts: like_count and comments_count, with its type and permalink. (Per Meta's IG Media reference; the owner can hide likes, in which case the field is absent.)"
+method = "GET"
+path = "/{media_id}"
+safety = "read"
+  [endpoint.fixed]
+  fields = "like_count,comments_count,media_type,permalink"
+  [[endpoint.param]]
+  name = "media_id"
+  in = "path"
+  required = true
+  description = "Numeric media id, as returned by instagram post."
+
+[[endpoint]]
+name = "media_insights"
+description = "Insights for one media object: views, reach, saved, shares. Needs the instagram_business_manage_insights permission, and which metrics exist depends on the media type, so Meta rejects the whole call if one does not apply. Not verified against the live API."
+method = "GET"
+path = "/{media_id}/insights"
+safety = "read"
+  [[endpoint.param]]
+  name = "media_id"
+  in = "path"
+  required = true
+  description = "Numeric media id."
+  [[endpoint.param]]
+  name = "metric"
+  default = "views,reach,saved,shares"
+  description = "Comma-separated metrics."

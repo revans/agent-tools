@@ -82,6 +82,8 @@ type fakeIG struct {
 	containerErr func(w http.ResponseWriter)
 	meBody       string
 	commentErr   string // body of a 400 for comments/replies
+	insightsErr  string // body of a 400 for a media insights call
+	mediaErr     string // body of a 400 for a media fields call
 	publishes    int
 	polls        int
 }
@@ -132,6 +134,20 @@ func newFake(t *testing.T) *fakeIG {
 				return
 			}
 			fmt.Fprint(w, `{"id":"MEDIA9"}`)
+		case r.Method == "GET" && strings.HasSuffix(r.URL.Path, "/insights"):
+			if f.insightsErr != "" {
+				w.WriteHeader(400)
+				fmt.Fprint(w, f.insightsErr)
+				return
+			}
+			fmt.Fprint(w, `{"data":[{"name":"views","period":"lifetime","values":[{"value":80}]},{"name":"reach","period":"lifetime","values":[{"value":60}]},{"name":"saved","period":"lifetime","total_value":{"value":3}},{"name":"shares","period":"lifetime","values":[{"value":1}]}]}`)
+		case r.Method == "GET" && strings.HasPrefix(r.URL.Path, "/v25.0/1790"):
+			if f.mediaErr != "" {
+				w.WriteHeader(400)
+				fmt.Fprint(w, f.mediaErr)
+				return
+			}
+			fmt.Fprint(w, `{"like_count":12,"comments_count":3,"media_type":"IMAGE","permalink":"https://www.instagram.com/p/ABC/","id":"17900000000000001"}`)
 		case r.Method == "GET" && r.URL.Path == "/v25.0/CONTAINER1":
 			f.polls++
 			s := "FINISHED"
