@@ -1,0 +1,349 @@
+# Cloudflare tools (the cloudflare CLI, built on apikit). The API token lives in the
+# [cloudflare] table of ~/.config/agent-tools/config.toml. cloudflare_read runs any
+# read-only endpoint by name, so an endpoint added in endpoints.d works with no change
+# here. There is no generic write tool: each change is its own tool, with its own
+# safety level. The DNS and purge tools work by zone NAME (example.com); the CLI
+# looks up the zone id itself. Structured record types (SRV, CAA, ...) are only
+# available from the CLI (--data), not here.
+
+[[tool]]
+name = "cloudflare_zones"
+description = "List the Cloudflare zones (domains) the token can see: name, id, status and account. Filter by exact name or status. Returns one page unless all is true."
+bin = "cloudflare"
+args = ["zones"]
+safety = "read"
+  [[tool.param]]
+  name = "name"
+  type = "string"
+  flag = "--name"
+  example = "example.com"
+  description = "Only the zone with this exact name."
+  [[tool.param]]
+  name = "status"
+  type = "string"
+  flag = "--status"
+  enum = ["active", "pending", "initializing", "moved"]
+  description = "Only zones in this status."
+  [[tool.param]]
+  name = "all"
+  type = "boolean"
+  flag = "--all"
+  description = "Follow every page of results (default: the first page)."
+  [[tool.param]]
+  name = "account"
+  type = "string"
+  flag = "--account"
+  description = "Account name from the cloudflare config. Optional when there is one account or a default."
+
+[[tool]]
+name = "cloudflare_dns_list"
+description = "List the DNS records of a zone by domain name: id, type, name, content, ttl, proxied. Filter by type or exact name (a short name such as www is read as www.example.com). Returns one page unless all is true."
+bin = "cloudflare"
+args = ["dns", "list"]
+safety = "read"
+  [[tool.param]]
+  name = "zone"
+  type = "string"
+  flag = "--zone"
+  required = true
+  example = "example.com"
+  description = "The zone's domain name, such as example.com (or its 32-character zone id). A name that matches no zone, or more than one, is refused."
+  [[tool.param]]
+  name = "type"
+  type = "string"
+  flag = "--type"
+  example = "A"
+  description = "Only this record type."
+  [[tool.param]]
+  name = "name"
+  type = "string"
+  flag = "--name"
+  example = "www"
+  description = "Only this record name: www, www.example.com, or @ for the zone apex."
+  [[tool.param]]
+  name = "all"
+  type = "boolean"
+  flag = "--all"
+  description = "Follow every page of results (default: the first page)."
+  [[tool.param]]
+  name = "account"
+  type = "string"
+  flag = "--account"
+  description = "Account name from the cloudflare config. Optional when there is one account or a default."
+
+[[tool]]
+name = "cloudflare_tunnels"
+description = "List Cloudflare Tunnels of the configured account: name, id, status and the number of live connections. Needs account_id in the cloudflare config."
+bin = "cloudflare"
+args = ["tunnels"]
+safety = "read"
+  [[tool.param]]
+  name = "status"
+  type = "string"
+  flag = "--status"
+  enum = ["healthy", "degraded", "down", "inactive"]
+  description = "Only tunnels in this status."
+  [[tool.param]]
+  name = "name"
+  type = "string"
+  flag = "--name"
+  example = "web"
+  description = "Only the tunnel with this exact name."
+  [[tool.param]]
+  name = "all"
+  type = "boolean"
+  flag = "--all"
+  description = "Follow every page of results (default: the first page)."
+  [[tool.param]]
+  name = "account"
+  type = "string"
+  flag = "--account"
+  description = "Account name from the cloudflare config. Optional when there is one account or a default."
+
+[[tool]]
+name = "cloudflare_read"
+description = "Call any read-only Cloudflare API endpoint by name and return its JSON. Use cloudflare_endpoints first to see the names and parameters. This reaches zone, zone_settings, dns_record, tunnel, tunnel_configuration, pages_projects, pages_deployments, accounts and any the owner has added. Endpoints that need an account id take it as a parameter (account_id)."
+bin = "cloudflare"
+args = ["call", "--max-safety=read"]
+safety = "read"
+timeout = "90s"
+  [[tool.param]]
+  name = "endpoint"
+  type = "string"
+  positional = true
+  required = true
+  example = "zone_settings"
+  description = "Endpoint name, e.g. zone_settings."
+  [[tool.param]]
+  name = "params"
+  type = "map"
+  flag = "--param"
+  description = "The endpoint's parameters as an object of strings, e.g. {\"zone_id\": \"023e105f4ecef8ad9ca31a8372d0c353\"}."
+  [[tool.param]]
+  name = "pages"
+  type = "integer"
+  flag = "--pages"
+  description = "For endpoints that paginate: follow the page numbers for up to this many pages."
+  [[tool.param]]
+  name = "account"
+  type = "string"
+  flag = "--account"
+  description = "Account name from the cloudflare config. Optional when there is one account or a default."
+
+[[tool]]
+name = "cloudflare_endpoints"
+description = "List the Cloudflare API endpoints available to cloudflare_read, or describe one in detail (parameters, types, which are required)."
+bin = "cloudflare"
+args = ["endpoints"]
+safety = "read"
+  [[tool.param]]
+  name = "endpoint"
+  type = "string"
+  positional = true
+  example = "dns_records"
+  description = "Describe this one endpoint. Omit to list all."
+
+[[tool]]
+name = "cloudflare_check"
+description = "Check that the configured Cloudflare API token is accepted and active (token verify)."
+bin = "cloudflare"
+args = ["check"]
+safety = "read"
+  [[tool.param]]
+  name = "account"
+  type = "string"
+  flag = "--account"
+  description = "Account name from the cloudflare config. Optional when there is one account or a default."
+
+[[tool]]
+name = "cloudflare_dns_add"
+description = "Add a DNS record to a zone, by domain name. This creates a public DNS record that goes live at once. ttl 1 means automatic. proxied (default false) sends traffic through Cloudflare and works for A, AAAA and CNAME only. An MX record needs a priority."
+bin = "cloudflare"
+args = ["dns", "add"]
+safety = "write"
+  [[tool.param]]
+  name = "zone"
+  type = "string"
+  flag = "--zone"
+  required = true
+  example = "example.com"
+  description = "The zone's domain name, such as example.com (or its 32-character zone id). A name that matches no zone, or more than one, is refused."
+  [[tool.param]]
+  name = "type"
+  type = "string"
+  flag = "--type"
+  required = true
+  enum = ["A", "AAAA", "CNAME", "TXT", "MX", "NS"]
+  example = "A"
+  description = "Record type."
+  [[tool.param]]
+  name = "name"
+  type = "string"
+  flag = "--name"
+  required = true
+  example = "www"
+  description = "Record name: www, www.example.com, or @ for the zone apex."
+  [[tool.param]]
+  name = "content"
+  type = "string"
+  flag = "--content"
+  required = true
+  example = "192.0.2.10"
+  description = "Record content: an IPv4 address for A, IPv6 for AAAA, a hostname for CNAME, MX and NS, text for TXT."
+  [[tool.param]]
+  name = "ttl"
+  type = "integer"
+  flag = "--ttl"
+  example = "1"
+  description = "Time to live in seconds: 1 for automatic (the default), or 60 to 86400."
+  [[tool.param]]
+  name = "proxied"
+  type = "boolean"
+  flag = "--proxied"
+  description = "Send traffic through Cloudflare (A, AAAA, CNAME only). Default false."
+  [[tool.param]]
+  name = "comment"
+  type = "string"
+  flag = "--comment"
+  example = "added by the agent"
+  description = "A note on the record; it does not affect DNS answers."
+  [[tool.param]]
+  name = "priority"
+  type = "integer"
+  flag = "--priority"
+  example = "10"
+  description = "Required for MX records: lower is preferred."
+  [[tool.param]]
+  name = "account"
+  type = "string"
+  flag = "--account"
+  description = "Account name from the cloudflare config. Optional when there is one account or a default."
+
+[[tool]]
+name = "cloudflare_dns_update"
+description = "Change fields of an existing DNS record of a zone: only the fields you give are changed (a PATCH). Changing a live record can redirect traffic or mail at once. Find the record id with cloudflare_dns_list."
+bin = "cloudflare"
+args = ["dns", "update"]
+safety = "write"
+  [[tool.param]]
+  name = "record_id"
+  type = "string"
+  positional = true
+  required = true
+  example = "023e105f4ecef8ad9ca31a8372d0c353"
+  description = "The DNS record id (from cloudflare_dns_list)."
+  [[tool.param]]
+  name = "zone"
+  type = "string"
+  flag = "--zone"
+  required = true
+  example = "example.com"
+  description = "The zone's domain name, such as example.com (or its 32-character zone id). A name that matches no zone, or more than one, is refused."
+  [[tool.param]]
+  name = "type"
+  type = "string"
+  flag = "--type"
+  enum = ["A", "AAAA", "CNAME", "TXT", "MX", "NS"]
+  example = "A"
+  description = "Change the record type."
+  [[tool.param]]
+  name = "name"
+  type = "string"
+  flag = "--name"
+  example = "www"
+  description = "Change the record name."
+  [[tool.param]]
+  name = "content"
+  type = "string"
+  flag = "--content"
+  example = "192.0.2.20"
+  description = "Change the record content."
+  [[tool.param]]
+  name = "ttl"
+  type = "integer"
+  flag = "--ttl"
+  example = "300"
+  description = "Change the time to live: 1 for automatic, or 60 to 86400."
+  [[tool.param]]
+  name = "proxied"
+  type = "string"
+  flag = "--proxied"
+  enum = ["true", "false"]
+  example = "true"
+  description = "Turn Cloudflare proxying on or off (A, AAAA, CNAME only)."
+  [[tool.param]]
+  name = "comment"
+  type = "string"
+  flag = "--comment"
+  example = "moved to the new host"
+  description = "Change the note on the record."
+  [[tool.param]]
+  name = "priority"
+  type = "integer"
+  flag = "--priority"
+  example = "10"
+  description = "Change the MX priority."
+  [[tool.param]]
+  name = "account"
+  type = "string"
+  flag = "--account"
+  description = "Account name from the cloudflare config. Optional when there is one account or a default."
+
+[[tool]]
+name = "cloudflare_dns_delete"
+description = "Delete a DNS record from a zone. This removes a public DNS record and cannot be undone; deleting the wrong one can take a site or mail offline. Find the record id with cloudflare_dns_list first."
+bin = "cloudflare"
+args = ["dns", "delete", "--max-safety=destructive"]
+safety = "destructive"
+  [[tool.param]]
+  name = "record_id"
+  type = "string"
+  positional = true
+  required = true
+  example = "023e105f4ecef8ad9ca31a8372d0c353"
+  description = "The DNS record id to delete (from cloudflare_dns_list)."
+  [[tool.param]]
+  name = "zone"
+  type = "string"
+  flag = "--zone"
+  required = true
+  example = "example.com"
+  description = "The zone's domain name, such as example.com (or its 32-character zone id). A name that matches no zone, or more than one, is refused."
+  [[tool.param]]
+  name = "account"
+  type = "string"
+  flag = "--account"
+  description = "Account name from the cloudflare config. Optional when there is one account or a default."
+
+[[tool]]
+name = "cloudflare_purge"
+description = "Purge a zone's CDN cache, by domain name. Pick exactly one mode: files (full URLs), hosts (hostnames), tags (Cache-Tag values) or everything (the whole zone cache; the next requests all go to the origin, so use it sparingly). Values are comma-separated."
+bin = "cloudflare"
+args = ["purge"]
+safety = "write"
+  [[tool.param]]
+  name = "zone"
+  type = "string"
+  flag = "--zone"
+  required = true
+  example = "example.com"
+  description = "The zone's domain name, such as example.com (or its 32-character zone id). A name that matches no zone, or more than one, is refused."
+  [[tool.param]]
+  name = "mode"
+  type = "string"
+  flag = "--mode"
+  required = true
+  enum = ["files", "hosts", "tags", "everything"]
+  example = "files"
+  description = "What to purge."
+  [[tool.param]]
+  name = "values"
+  type = "string"
+  flag = "--values"
+  example = "https://example.com/css/site.css"
+  description = "Comma-separated URLs (files), hostnames (hosts) or cache tags (tags). Leave out for everything."
+  [[tool.param]]
+  name = "account"
+  type = "string"
+  flag = "--account"
+  description = "Account name from the cloudflare config. Optional when there is one account or a default."

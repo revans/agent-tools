@@ -1,0 +1,471 @@
+# Cloudflare API v4 endpoints. Add your own in ~/.config/agent-tools/cloudflare/endpoints.d/*.toml,
+# in the same format, and `cloudflare call NAME` runs them. Base URL: api.cloudflare.com/client/v4.
+# Auth is an API token sent as `Authorization: Bearer ...`, never in the URL.
+#
+# Every response is an envelope {success, errors, messages, result, result_info}.
+# `select = "result"` returns the payload. A success:false envelope is turned into an
+# error by the tool's HTTP layer (see main.go), whatever the HTTP status.
+# Paths, parameters and bodies were checked against Cloudflare's published OpenAPI
+# schema (github.com/cloudflare/api-schemas); nothing has run against the live API.
+
+[[endpoint]]
+name = "token_verify"
+description = "Check that the API token works and is active (GET /user/tokens/verify). Works for user-owned tokens; an account-owned token uses account_token_verify."
+method = "GET"
+path = "/user/tokens/verify"
+safety = "read"
+select = "result"
+
+[[endpoint]]
+name = "account_token_verify"
+description = "Check an account-owned API token (GET /accounts/{account_id}/tokens/verify)."
+method = "GET"
+path = "/accounts/{account_id}/tokens/verify"
+safety = "read"
+select = "result"
+  [[endpoint.param]]
+  name = "account_id"
+  in = "path"
+  required = true
+  description = "Account id (32 hex characters). `cloudflare call accounts` lists yours."
+
+[[endpoint]]
+name = "accounts"
+description = "The accounts the token can see: id and name."
+method = "GET"
+path = "/accounts"
+safety = "read"
+select = "result"
+  [endpoint.paginate]
+  kind = "page"
+  cursor_path = "result_info.page"
+  cursor_param = "page"
+  total_path = "result_info.total_pages"
+  max_pages = 100
+  [[endpoint.param]]
+  name = "page"
+  type = "integer"
+  description = "Page number, starting at 1. `--pages` sets it for you."
+  [[endpoint.param]]
+  name = "per_page"
+  type = "integer"
+  description = "Results per page (5 to 50)."
+  [[endpoint.param]]
+  name = "name"
+  description = "Filter by account name."
+
+[[endpoint]]
+name = "zones"
+description = "List zones (domains). Filter by exact name, status or account id. Each: id, name, status, account."
+method = "GET"
+path = "/zones"
+safety = "read"
+select = "result"
+  [endpoint.paginate]
+  kind = "page"
+  cursor_path = "result_info.page"
+  cursor_param = "page"
+  total_path = "result_info.total_pages"
+  max_pages = 100
+  [[endpoint.param]]
+  name = "name"
+  description = "Exact zone name, e.g. example.com."
+  [[endpoint.param]]
+  name = "status"
+  enum = ["initializing", "pending", "active", "moved"]
+  description = "Zone status."
+  [[endpoint.param]]
+  name = "account_id"
+  wire = "account.id"
+  description = "Only zones of this account id."
+  [[endpoint.param]]
+  name = "page"
+  type = "integer"
+  description = "Page number, starting at 1. `--pages` sets it for you."
+  [[endpoint.param]]
+  name = "per_page"
+  type = "integer"
+  description = "Results per page (5 to 50)."
+
+[[endpoint]]
+name = "zone"
+description = "One zone by id: name, status, name servers, plan, account."
+method = "GET"
+path = "/zones/{zone_id}"
+safety = "read"
+select = "result"
+  [[endpoint.param]]
+  name = "zone_id"
+  in = "path"
+  required = true
+  description = "Zone id (32 hex characters). `cloudflare zones` lists them."
+
+[[endpoint]]
+name = "dns_records"
+description = "List a zone's DNS records. name and content are exact matches on the full value (www.example.com, not www). Page-paginated."
+method = "GET"
+path = "/zones/{zone_id}/dns_records"
+safety = "read"
+select = "result"
+  [endpoint.paginate]
+  kind = "page"
+  cursor_path = "result_info.page"
+  cursor_param = "page"
+  total_path = "result_info.total_pages"
+  max_pages = 100
+  [[endpoint.param]]
+  name = "zone_id"
+  in = "path"
+  required = true
+  description = "Zone id (32 hex characters). `cloudflare zones` lists them."
+  [[endpoint.param]]
+  name = "type"
+  enum = ["A", "AAAA", "CAA", "CERT", "CNAME", "DNSKEY", "DS", "HTTPS", "LOC", "MX", "NAPTR", "NS", "OPENPGPKEY", "PTR", "SMIMEA", "SRV", "SSHFP", "SVCB", "TLSA", "TXT", "URI"]
+  description = "Record type."
+  [[endpoint.param]]
+  name = "name"
+  description = "Exact full record name, e.g. www.example.com."
+  [[endpoint.param]]
+  name = "content"
+  description = "Exact record content, e.g. 192.0.2.1."
+  [[endpoint.param]]
+  name = "proxied"
+  type = "boolean"
+  description = "Only records that are (true) or are not (false) proxied through Cloudflare."
+  [[endpoint.param]]
+  name = "page"
+  type = "integer"
+  description = "Page number, starting at 1. `--pages` sets it for you."
+  [[endpoint.param]]
+  name = "per_page"
+  type = "integer"
+  description = "Records per page (default 100)."
+
+[[endpoint]]
+name = "dns_record"
+description = "One DNS record by id."
+method = "GET"
+path = "/zones/{zone_id}/dns_records/{dns_record_id}"
+safety = "read"
+select = "result"
+  [[endpoint.param]]
+  name = "zone_id"
+  in = "path"
+  required = true
+  description = "Zone id (32 hex characters). `cloudflare zones` lists them."
+  [[endpoint.param]]
+  name = "dns_record_id"
+  in = "path"
+  required = true
+  description = "DNS record id."
+
+[[endpoint]]
+name = "zone_settings"
+description = "All of a zone's settings (ssl, always_use_https, cache_level, ...)."
+method = "GET"
+path = "/zones/{zone_id}/settings"
+safety = "read"
+select = "result"
+  [[endpoint.param]]
+  name = "zone_id"
+  in = "path"
+  required = true
+  description = "Zone id (32 hex characters). `cloudflare zones` lists them."
+
+[[endpoint]]
+name = "tunnels"
+description = "List Cloudflare Tunnels (cfd_tunnel) of an account: id, name, status, connections. Deleted tunnels are left out unless is_deleted=true. Page-paginated."
+method = "GET"
+path = "/accounts/{account_id}/cfd_tunnel"
+safety = "read"
+select = "result"
+  [endpoint.paginate]
+  kind = "page"
+  cursor_path = "result_info.page"
+  cursor_param = "page"
+  total_path = "result_info.total_pages"
+  max_pages = 100
+  [[endpoint.param]]
+  name = "account_id"
+  in = "path"
+  required = true
+  description = "Account id (32 hex characters). `cloudflare call accounts` lists yours."
+  [[endpoint.param]]
+  name = "name"
+  description = "Exact tunnel name."
+  [[endpoint.param]]
+  name = "status"
+  enum = ["inactive", "degraded", "healthy", "down"]
+  description = "Tunnel status."
+  [[endpoint.param]]
+  name = "is_deleted"
+  type = "boolean"
+  default = "false"
+  description = "true: only deleted tunnels. false: exclude them."
+  [[endpoint.param]]
+  name = "page"
+  type = "integer"
+  description = "Page number, starting at 1. `--pages` sets it for you."
+  [[endpoint.param]]
+  name = "per_page"
+  type = "integer"
+  description = "Results per page (1 to 1000)."
+
+[[endpoint]]
+name = "tunnel"
+description = "One Cloudflare Tunnel by id."
+method = "GET"
+path = "/accounts/{account_id}/cfd_tunnel/{tunnel_id}"
+safety = "read"
+select = "result"
+  [[endpoint.param]]
+  name = "account_id"
+  in = "path"
+  required = true
+  description = "Account id (32 hex characters). `cloudflare call accounts` lists yours."
+  [[endpoint.param]]
+  name = "tunnel_id"
+  in = "path"
+  required = true
+  description = "Tunnel id (a UUID)."
+
+[[endpoint]]
+name = "tunnel_configuration"
+description = "A tunnel's remotely managed configuration (ingress rules)."
+method = "GET"
+path = "/accounts/{account_id}/cfd_tunnel/{tunnel_id}/configurations"
+safety = "read"
+select = "result"
+  [[endpoint.param]]
+  name = "account_id"
+  in = "path"
+  required = true
+  description = "Account id (32 hex characters). `cloudflare call accounts` lists yours."
+  [[endpoint.param]]
+  name = "tunnel_id"
+  in = "path"
+  required = true
+  description = "Tunnel id (a UUID)."
+
+[[endpoint]]
+name = "pages_projects"
+description = "List Cloudflare Pages projects of an account. Page-paginated."
+method = "GET"
+path = "/accounts/{account_id}/pages/projects"
+safety = "read"
+select = "result"
+  [endpoint.paginate]
+  kind = "page"
+  cursor_path = "result_info.page"
+  cursor_param = "page"
+  total_path = "result_info.total_pages"
+  max_pages = 100
+  [[endpoint.param]]
+  name = "account_id"
+  in = "path"
+  required = true
+  description = "Account id (32 hex characters). `cloudflare call accounts` lists yours."
+  [[endpoint.param]]
+  name = "page"
+  type = "integer"
+  description = "Page number, starting at 1. `--pages` sets it for you."
+  [[endpoint.param]]
+  name = "per_page"
+  type = "integer"
+  description = "Results per page."
+
+[[endpoint]]
+name = "pages_deployments"
+description = "List the deployments of a Pages project, newest first. Page-paginated."
+method = "GET"
+path = "/accounts/{account_id}/pages/projects/{project_name}/deployments"
+safety = "read"
+select = "result"
+  [endpoint.paginate]
+  kind = "page"
+  cursor_path = "result_info.page"
+  cursor_param = "page"
+  total_path = "result_info.total_pages"
+  max_pages = 100
+  [[endpoint.param]]
+  name = "account_id"
+  in = "path"
+  required = true
+  description = "Account id (32 hex characters). `cloudflare call accounts` lists yours."
+  [[endpoint.param]]
+  name = "project_name"
+  in = "path"
+  required = true
+  description = "Pages project name."
+  [[endpoint.param]]
+  name = "env"
+  enum = ["production", "preview"]
+  description = "Only this environment."
+  [[endpoint.param]]
+  name = "page"
+  type = "integer"
+  description = "Page number, starting at 1. `--pages` sets it for you."
+  [[endpoint.param]]
+  name = "per_page"
+  type = "integer"
+  description = "Results per page."
+
+[[endpoint]]
+name = "dns_record_create"
+description = "Create a DNS record in a zone (POST). The record goes live in public DNS."
+method = "POST"
+path = "/zones/{zone_id}/dns_records"
+safety = "write"
+select = "result"
+  [[endpoint.param]]
+  name = "zone_id"
+  in = "path"
+  required = true
+  description = "Zone id (32 hex characters). `cloudflare zones` lists them."
+  [[endpoint.param]]
+  name = "type"
+  in = "body"
+  required = true
+  enum = ["A", "AAAA", "CAA", "CERT", "CNAME", "DNSKEY", "DS", "HTTPS", "LOC", "MX", "NAPTR", "NS", "OPENPGPKEY", "PTR", "SMIMEA", "SRV", "SSHFP", "SVCB", "TLSA", "TXT", "URI"]
+  description = "Record type."
+  [[endpoint.param]]
+  name = "name"
+  in = "body"
+  required = true
+  description = "Record name: full (www.example.com), relative (www) or @ for the zone apex."
+  [[endpoint.param]]
+  name = "content"
+  in = "body"
+  description = "Record content: an IP address for A/AAAA, a hostname for CNAME/MX/NS, text for TXT."
+  [[endpoint.param]]
+  name = "ttl"
+  type = "integer"
+  in = "body"
+  description = "Time to live in seconds. 1 means automatic; otherwise 60 to 86400 (30 on Enterprise)."
+  [[endpoint.param]]
+  name = "proxied"
+  type = "boolean"
+  in = "body"
+  description = "Send traffic through Cloudflare (A, AAAA and CNAME only). Cloudflare's default is false."
+  [[endpoint.param]]
+  name = "comment"
+  in = "body"
+  description = "A note about the record; it does not affect DNS answers."
+  [[endpoint.param]]
+  name = "priority"
+  type = "integer"
+  in = "body"
+  description = "Required for MX and URI records; lower is preferred."
+  [[endpoint.param]]
+  name = "data"
+  type = "json"
+  in = "body"
+  description = "A JSON object of components for the types that have them (SRV, CAA, HTTPS, ...). CAA, for example, takes an object with flags, tag and value keys."
+
+[[endpoint]]
+name = "dns_record_update"
+description = "Change some fields of a DNS record (PATCH: only the fields you give are changed)."
+method = "PATCH"
+path = "/zones/{zone_id}/dns_records/{dns_record_id}"
+safety = "write"
+select = "result"
+  [[endpoint.param]]
+  name = "zone_id"
+  in = "path"
+  required = true
+  description = "Zone id (32 hex characters). `cloudflare zones` lists them."
+  [[endpoint.param]]
+  name = "dns_record_id"
+  in = "path"
+  required = true
+  description = "DNS record id."
+  [[endpoint.param]]
+  name = "type"
+  in = "body"
+  required = false
+  enum = ["A", "AAAA", "CAA", "CERT", "CNAME", "DNSKEY", "DS", "HTTPS", "LOC", "MX", "NAPTR", "NS", "OPENPGPKEY", "PTR", "SMIMEA", "SRV", "SSHFP", "SVCB", "TLSA", "TXT", "URI"]
+  description = "Record type."
+  [[endpoint.param]]
+  name = "name"
+  in = "body"
+  required = false
+  description = "Record name: full (www.example.com), relative (www) or @ for the zone apex."
+  [[endpoint.param]]
+  name = "content"
+  in = "body"
+  description = "Record content: an IP address for A/AAAA, a hostname for CNAME/MX/NS, text for TXT."
+  [[endpoint.param]]
+  name = "ttl"
+  type = "integer"
+  in = "body"
+  description = "Time to live in seconds. 1 means automatic; otherwise 60 to 86400 (30 on Enterprise)."
+  [[endpoint.param]]
+  name = "proxied"
+  type = "boolean"
+  in = "body"
+  description = "Send traffic through Cloudflare (A, AAAA and CNAME only). Cloudflare's default is false."
+  [[endpoint.param]]
+  name = "comment"
+  in = "body"
+  description = "A note about the record; it does not affect DNS answers."
+  [[endpoint.param]]
+  name = "priority"
+  type = "integer"
+  in = "body"
+  description = "Required for MX and URI records; lower is preferred."
+  [[endpoint.param]]
+  name = "data"
+  type = "json"
+  in = "body"
+  description = "A JSON object of components for the types that have them (SRV, CAA, HTTPS, ...). CAA, for example, takes an object with flags, tag and value keys."
+
+[[endpoint]]
+name = "dns_record_delete"
+description = "Delete a DNS record. This is a public DNS record and the deletion cannot be undone; it can take a site or mail offline."
+method = "DELETE"
+path = "/zones/{zone_id}/dns_records/{dns_record_id}"
+safety = "destructive"
+select = "result"
+  [[endpoint.param]]
+  name = "zone_id"
+  in = "path"
+  required = true
+  description = "Zone id (32 hex characters). `cloudflare zones` lists them."
+  [[endpoint.param]]
+  name = "dns_record_id"
+  in = "path"
+  required = true
+  description = "DNS record id."
+
+[[endpoint]]
+name = "purge_cache"
+description = "Purge a zone's cache (POST). Give exactly one of files, hosts, tags or purge_everything=true."
+method = "POST"
+path = "/zones/{zone_id}/purge_cache"
+safety = "write"
+select = "result"
+  [[endpoint.param]]
+  name = "zone_id"
+  in = "path"
+  required = true
+  description = "Zone id (32 hex characters). `cloudflare zones` lists them."
+  [[endpoint.param]]
+  name = "files"
+  type = "list"
+  in = "body"
+  description = "Full URLs to purge, comma-separated (a URL may not itself contain a comma)."
+  [[endpoint.param]]
+  name = "hosts"
+  type = "list"
+  in = "body"
+  description = "Hostnames to purge, comma-separated."
+  [[endpoint.param]]
+  name = "tags"
+  type = "list"
+  in = "body"
+  description = "Cache-Tag values to purge, comma-separated."
+  [[endpoint.param]]
+  name = "purge_everything"
+  type = "boolean"
+  in = "body"
+  description = "true to purge everything cached for the zone."
