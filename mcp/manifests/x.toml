@@ -1,0 +1,199 @@
+# X (Twitter) tools (the x CLI, built on apikit). Credentials live in the [x]
+# table of ~/.config/agent-tools/config.toml. x_read runs any read-only endpoint
+# by name, so an endpoint added in ~/.config/agent-tools/x/endpoints.d works with
+# no change here. There is deliberately NO generic write tool: x_post and x_reply
+# are the only ways to publish, and both are destructive.
+
+[[tool]]
+name = "x_search"
+description = "Search X (Twitter) by keyword or search operators. Covers roughly the last 7 days, not the full archive. Returns up to 100 posts (id, text, author_id, created_at, like_count, repost_count, reply_count, quote_count, bookmark_count, impression_count) and whether more exist."
+bin = "x"
+args = ["search"]
+safety = "read"
+  [[tool.param]]
+  name = "query"
+  type = "string"
+  flag = "--query"
+  required = true
+  description = "Keyword, topic or X search query."
+  [[tool.param]]
+  name = "account"
+  type = "string"
+  flag = "--account"
+  description = "Account name from the x config. Optional when there is one account or a default."
+
+[[tool]]
+name = "x_timeline"
+description = "Read one X account's recent posts by username (with or without a leading @). Returns up to 100 posts with public engagement metrics, the username and user_id, and whether more exist."
+bin = "x"
+args = ["timeline"]
+safety = "read"
+  [[tool.param]]
+  name = "username"
+  type = "string"
+  flag = "--username"
+  required = true
+  description = "The account's handle, with or without @."
+  [[tool.param]]
+  name = "account"
+  type = "string"
+  flag = "--account"
+  description = "Account name from the x config. Optional when there is one account or a default."
+
+[[tool]]
+name = "x_thread"
+description = "Fetch one X post's public engagement metrics together with up to 100 of its replies, in one call. Reply fetching covers roughly the last 7 days; an older post returns a thin or empty reply list."
+bin = "x"
+args = ["thread"]
+safety = "read"
+  [[tool.param]]
+  name = "tweet_id"
+  type = "string"
+  positional = true
+  required = true
+  description = "The numeric id of the post."
+  [[tool.param]]
+  name = "account"
+  type = "string"
+  flag = "--account"
+  description = "Account name from the x config. Optional when there is one account or a default."
+
+[[tool]]
+name = "x_profile_metrics"
+description = "The connected X account's own profile metrics: followers, following, total posts, listed, likes and media counts. A snapshot of the account, not per-post performance (use x_engagement_baseline for that)."
+bin = "x"
+args = ["profile-metrics"]
+safety = "read"
+  [[tool.param]]
+  name = "account"
+  type = "string"
+  flag = "--account"
+  description = "Account name from the x config. Optional when there is one account or a default."
+
+[[tool]]
+name = "x_engagement_baseline"
+description = "Per-metric averages (likes, reposts, replies, quotes, bookmarks, impressions) across an account's recent posts. Cached; recomputed only when the cache is older than the refresh interval (weekly by default) or force_refresh is set. username may be omitted once exactly one baseline exists."
+bin = "x"
+args = ["engagement-baseline"]
+safety = "read"
+timeout = "90s"
+  [[tool.param]]
+  name = "username"
+  type = "string"
+  flag = "--username"
+  description = "The account's handle, with or without @. Required for the first baseline."
+  [[tool.param]]
+  name = "force_refresh"
+  type = "boolean"
+  flag = "--force-refresh"
+  description = "Recompute now even if the cached baseline is still fresh."
+  [[tool.param]]
+  name = "account"
+  type = "string"
+  flag = "--account"
+  description = "Account name from the x config. Optional when there is one account or a default."
+
+[[tool]]
+name = "x_post"
+description = "PUBLISH a new post to X, with an optional single image. This is public and cannot be undone: the post goes live on the account immediately. Only call it with text the user has approved word for word. Use dry_run first to preview."
+bin = "x"
+args = ["post"]
+safety = "destructive"
+timeout = "120s"
+  [[tool.param]]
+  name = "text"
+  type = "string"
+  flag = "--text"
+  required = true
+  description = "The exact text to publish."
+  [[tool.param]]
+  name = "image_path"
+  type = "string"
+  flag = "--image"
+  description = "Optional absolute local path to a png, jpg, jpeg, gif or webp image (at most 5 MiB)."
+  [[tool.param]]
+  name = "dry_run"
+  type = "boolean"
+  flag = "--dry-run"
+  description = "Show the requests that would be sent, and send nothing."
+  [[tool.param]]
+  name = "account"
+  type = "string"
+  flag = "--account"
+  description = "Account name from the x config. Optional when there is one account or a default."
+
+[[tool]]
+name = "x_reply"
+description = "PUBLISH a reply to an existing X post, with an optional single image. This is public and cannot be undone: the reply goes live immediately. Only call it with text the user has approved word for word, and check the target tweet_id with x_thread first. Use dry_run first to preview."
+bin = "x"
+args = ["reply"]
+safety = "destructive"
+timeout = "120s"
+  [[tool.param]]
+  name = "tweet_id"
+  type = "string"
+  positional = true
+  required = true
+  description = "The numeric id of the post to reply to."
+  [[tool.param]]
+  name = "text"
+  type = "string"
+  flag = "--text"
+  required = true
+  description = "The exact reply text to publish."
+  [[tool.param]]
+  name = "image_path"
+  type = "string"
+  flag = "--image"
+  description = "Optional absolute local path to a png, jpg, jpeg, gif or webp image (at most 5 MiB)."
+  [[tool.param]]
+  name = "dry_run"
+  type = "boolean"
+  flag = "--dry-run"
+  description = "Show the requests that would be sent, and send nothing."
+  [[tool.param]]
+  name = "account"
+  type = "string"
+  flag = "--account"
+  description = "Account name from the x config. Optional when there is one account or a default."
+
+[[tool]]
+name = "x_read"
+description = "Call any read-only X API endpoint by name and return its JSON. Use x_endpoints first to see the endpoint names and their parameters. Reaches endpoints beyond the commands above, such as user_by_id or tweets_lookup (not from Mimir, unverified), and any the owner has added."
+bin = "x"
+args = ["call", "--max-safety=read"]
+safety = "read"
+timeout = "90s"
+  [[tool.param]]
+  name = "endpoint"
+  type = "string"
+  positional = true
+  required = true
+  description = "Endpoint name, e.g. user_by_username."
+  [[tool.param]]
+  name = "params"
+  type = "map"
+  flag = "--param"
+  description = "The endpoint's parameters as an object of strings, e.g. {\"username\": \"jack\"}."
+  [[tool.param]]
+  name = "pages"
+  type = "integer"
+  flag = "--pages"
+  description = "For endpoints that paginate: follow the cursor for up to this many pages."
+  [[tool.param]]
+  name = "account"
+  type = "string"
+  flag = "--account"
+  description = "Account name from the x config. Optional when there is one account or a default."
+
+[[tool]]
+name = "x_endpoints"
+description = "List the X API endpoints available to x_read, or describe one in detail (parameters, types, which are required)."
+bin = "x"
+args = ["endpoints"]
+safety = "read"
+  [[tool.param]]
+  name = "endpoint"
+  type = "string"
+  positional = true
+  description = "Describe this one endpoint. Omit to list all."

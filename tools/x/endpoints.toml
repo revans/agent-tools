@@ -1,0 +1,195 @@
+# X (Twitter) API v2 endpoints. Base URL: https://api.x.com/2, signed with
+# OAuth 1.0a (user context). Add your own in ~/.config/agent-tools/x/endpoints.d/*.toml
+# (or a directory in $X_ENDPOINTS), in the same format; `x call NAME` runs them.
+#
+# FROM MIMIR: search_recent, user_by_username, user_tweets, get_tweet, users_me
+# and create_post. Their paths, query parameters and body shapes are the ones in
+# Mimir's x_*.rs, which says it verified them live. Pagination on search_recent
+# and user_tweets is NOT from Mimir (it reads one page): the cursor parameter
+# names come from X's documentation and are unverified.
+#
+# NOT FROM MIMIR: user_by_id, users_lookup and tweets_lookup, at the end. They
+# are written from X's public documentation only and have never been run.
+#
+# Media upload is not here: it is a multipart body, which a spec cannot describe.
+# The `post` and `reply` commands do it (POST /2/media/upload, as Mimir does).
+
+[[endpoint]]
+name = "search_recent"
+description = "Search posts from roughly the last 7 days by keyword or X search operators. One page, up to 100 posts, with public metrics."
+method = "GET"
+path = "/tweets/search/recent"
+safety = "read"
+select = "data"
+  [endpoint.paginate]
+  cursor_path = "meta.next_token"
+  cursor_param = "next_token"
+  [[endpoint.param]]
+  name = "query"
+  required = true
+  description = "Search query. Supports X operators such as from:user or conversation_id:ID."
+  [[endpoint.param]]
+  name = "max_results"
+  type = "integer"
+  default = "100"
+  description = "Posts per page, 10 to 100."
+  [[endpoint.param]]
+  name = "tweet_fields"
+  wire = "tweet.fields"
+  default = "created_at,public_metrics,author_id"
+  description = "Comma-separated post fields to return."
+  [[endpoint.param]]
+  name = "next_token"
+  description = "Cursor from the previous page (unverified; Mimir reads one page)."
+
+[[endpoint]]
+name = "user_by_username"
+description = "Look up an account by username (no @). Returns its id, name and username."
+method = "GET"
+path = "/users/by/username/{username}"
+safety = "read"
+select = "data"
+  [[endpoint.param]]
+  name = "username"
+  in = "path"
+  required = true
+  description = "X username: 1-15 letters, digits or underscores, no @."
+
+[[endpoint]]
+name = "user_tweets"
+description = "An account's recent posts by numeric user id (find it with user_by_username). One page, up to 100 posts, with public metrics."
+method = "GET"
+path = "/users/{id}/tweets"
+safety = "read"
+select = "data"
+  [endpoint.paginate]
+  cursor_path = "meta.next_token"
+  cursor_param = "pagination_token"
+  [[endpoint.param]]
+  name = "id"
+  in = "path"
+  required = true
+  description = "Numeric user id."
+  [[endpoint.param]]
+  name = "max_results"
+  type = "integer"
+  default = "100"
+  description = "Posts per page, 5 to 100."
+  [[endpoint.param]]
+  name = "tweet_fields"
+  wire = "tweet.fields"
+  default = "created_at,public_metrics,author_id"
+  description = "Comma-separated post fields to return."
+  [[endpoint.param]]
+  name = "pagination_token"
+  description = "Cursor from the previous page (unverified; Mimir reads one page)."
+
+[[endpoint]]
+name = "get_tweet"
+description = "One post by numeric id, with its public metrics and conversation_id."
+method = "GET"
+path = "/tweets/{id}"
+safety = "read"
+select = "data"
+  [[endpoint.param]]
+  name = "id"
+  in = "path"
+  required = true
+  description = "Numeric post id."
+  [[endpoint.param]]
+  name = "tweet_fields"
+  wire = "tweet.fields"
+  default = "created_at,public_metrics,author_id,conversation_id"
+  description = "Comma-separated post fields to return."
+
+[[endpoint]]
+name = "users_me"
+description = "The authenticated account (the one the four credentials belong to), with its public metrics: followers, following, posts, listed."
+method = "GET"
+path = "/users/me"
+safety = "read"
+select = "data"
+  [[endpoint.param]]
+  name = "user_fields"
+  wire = "user.fields"
+  default = "public_metrics"
+  description = "Comma-separated user fields to return."
+
+[[endpoint]]
+name = "create_post"
+description = "Publish a post, or a reply when reply is given. PUBLIC and cannot be undone. The post and reply commands are safer: they check the text and the image first."
+method = "POST"
+path = "/tweets"
+safety = "write"
+select = "data"
+  [[endpoint.param]]
+  name = "text"
+  in = "body"
+  required = true
+  description = "The exact post text."
+  [[endpoint.param]]
+  name = "reply"
+  type = "json"
+  in = "body"
+  description = "To reply: {\"in_reply_to_tweet_id\": \"ID\"}."
+  [[endpoint.param]]
+  name = "media"
+  type = "json"
+  in = "body"
+  description = "To attach an uploaded image: {\"media_ids\": [\"ID\"]}. Upload with the post command."
+
+# ---- not from Mimir (written from X's public documentation, never run) ----
+
+[[endpoint]]
+name = "user_by_id"
+description = "NOT FROM MIMIR, unverified. Look up an account by numeric id, with its public metrics."
+method = "GET"
+path = "/users/{id}"
+safety = "read"
+select = "data"
+  [[endpoint.param]]
+  name = "id"
+  in = "path"
+  required = true
+  description = "Numeric user id."
+  [[endpoint.param]]
+  name = "user_fields"
+  wire = "user.fields"
+  default = "public_metrics"
+  description = "Comma-separated user fields to return."
+
+[[endpoint]]
+name = "users_lookup"
+description = "NOT FROM MIMIR, unverified. Look up several accounts at once by username."
+method = "GET"
+path = "/users/by"
+safety = "read"
+select = "data"
+  [[endpoint.param]]
+  name = "usernames"
+  type = "list"
+  required = true
+  description = "Comma-separated usernames (no @), up to 100."
+  [[endpoint.param]]
+  name = "user_fields"
+  wire = "user.fields"
+  default = "public_metrics"
+  description = "Comma-separated user fields to return."
+
+[[endpoint]]
+name = "tweets_lookup"
+description = "NOT FROM MIMIR, unverified. Look up several posts at once by id, with public metrics."
+method = "GET"
+path = "/tweets"
+safety = "read"
+select = "data"
+  [[endpoint.param]]
+  name = "ids"
+  type = "list"
+  required = true
+  description = "Comma-separated post ids, up to 100."
+  [[endpoint.param]]
+  name = "tweet_fields"
+  wire = "tweet.fields"
+  default = "created_at,public_metrics,author_id"
+  description = "Comma-separated post fields to return."
