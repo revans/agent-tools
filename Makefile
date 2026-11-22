@@ -18,6 +18,12 @@ ROOT       := $(patsubst %/,%,$(dir $(abspath $(lastword $(MAKEFILE_LIST)))))
 TOOLS      := $(ROOT)/tools
 LIBS       := $(ROOT)/libs
 
+# The most dangerous tools the MCP server may offer: read, write or destructive.
+# The tools that publish to X, LinkedIn and Instagram are destructive, so they
+# are off until you register with:  make mcp-register MCP_ALLOW=destructive
+MCP_ALLOW ?= write
+MCP_ARGS  := $(if $(filter-out write,$(MCP_ALLOW)),-allow $(MCP_ALLOW),)
+
 CRATES   := notif-slack notif-tg
 GO       ?= go
 GO_TOOLS := wharf docli reddit youtube linkedin instagram x
@@ -78,7 +84,7 @@ mcp: ## Build only the MCP server (agent-tools-mcp)
 	@mkdir -p "$(TARGET)"
 	cd "$(ROOT)/mcp" && $(GO) build -o "$(TARGET)/agent-tools-mcp" .
 
-test-mcp: ## Vet and test the MCP server
+test-mcp: build ## Vet and test the MCP server (builds every CLI first: it runs each manifest tool against its real binary)
 	cd "$(ROOT)/mcp" && $(GO) vet ./... && $(GO) test ./...
 
 install-mcp: mcp ## Install agent-tools-mcp into PREFIX/bin
@@ -92,8 +98,8 @@ uninstall-mcp: ## Remove agent-tools-mcp from PREFIX/bin
 mcp-register: install ## Register the MCP server with whichever of claude, codex and grok are installed
 	@for c in claude codex grok; do \
 		if command -v $$c >/dev/null 2>&1; then \
-			if [ $$c = claude ]; then $$c mcp add --scope user agent-tools -- "$(PREFIX)/bin/agent-tools-mcp"; \
-			else $$c mcp add agent-tools -- "$(PREFIX)/bin/agent-tools-mcp"; fi \
+			if [ $$c = claude ]; then $$c mcp add --scope user agent-tools -- "$(PREFIX)/bin/agent-tools-mcp" $(MCP_ARGS); \
+			else $$c mcp add agent-tools -- "$(PREFIX)/bin/agent-tools-mcp" $(MCP_ARGS); fi \
 			&& echo "registered with $$c" || echo "could not register with $$c (already added? try make mcp-unregister)"; \
 		else echo "$$c not installed, skipped"; fi; \
 	done

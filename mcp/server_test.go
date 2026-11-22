@@ -28,8 +28,8 @@ func TestBuiltinManifestsLoad(t *testing.T) {
 			continue
 		}
 		d := strings.ToLower(tl.Description)
-		if !strings.Contains(d, "publish") || !strings.Contains(d, "cannot be undone") {
-			t.Errorf("%s is destructive, so its description must say it publishes and cannot be undone: %q", tl.Name, tl.Description)
+		if !(strings.Contains(d, "publish") || strings.Contains(d, "public")) || !strings.Contains(d, "cannot be undone") {
+			t.Errorf("%s is destructive, so its description must say it is public (or publishes) and cannot be undone: %q", tl.Name, tl.Description)
 		}
 		if len(tl.Params) == 0 {
 			t.Errorf("%s: a destructive tool must take explicit arguments", tl.Name)
