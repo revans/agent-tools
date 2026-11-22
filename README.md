@@ -11,6 +11,9 @@ Claude Code skill that teaches an agent to drive it.
 - **`docli`**: manage DigitalOcean droplets, VPCs, firewalls, DNS and databases from
   the command line, with a plan before every change. See [tools/docli/README.md](tools/docli/README.md).
 
+- **`reddit`**: search Reddit and read posts with their top comments. Built on
+  [`apikit`](libs/apikit/README.md), where a new API endpoint is a few lines of
+  TOML. See [tools/reddit/README.md](tools/reddit/README.md).
 - **`agent-tools-mcp`**: one MCP server that gives Claude Code, Codex and Grok
   (and, over HTTP with OAuth, claude.ai and ChatGPT web) all of these tools,
   plus `docli` for DigitalOcean. See [mcp/README.md](mcp/README.md).
@@ -29,6 +32,7 @@ notif-tg     post --account gierd --chat releases --template deploy \
 | [`notif-tg`](tools/notif-tg) | Telegram | send, read messages sent to the bot, watch, reply |
 | [`wharf`](tools/wharf) | SFTP | explore, sync, deploy, move, archive, pull, diff, verify, restore, prune, delete |
 | [`docli`](tools/docli) | DigitalOcean | droplets, VPCs, firewalls, DNS, databases; plan, apply |
+| [`reddit`](tools/reddit) | Reddit | search, fetch a post with comments, any endpoint |
 
 Each keeps its own external TOML file holding every account, every destination
 and every credential, so nothing is hard-coded and no token is ever passed on

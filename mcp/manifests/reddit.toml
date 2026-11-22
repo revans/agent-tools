@@ -1,0 +1,85 @@
+# Reddit tools (the reddit CLI, built on apikit). Credentials live in
+# ~/.config/reddit/config.toml. reddit_read runs any read-only endpoint by name,
+# so an endpoint added in ~/.config/reddit/endpoints.d works with no change here.
+
+[[tool]]
+name = "reddit_search"
+description = "Search Reddit by keyword, optionally inside one subreddit. Returns up to 10 posts (id, title, subreddit, score, comment_count, permalink) and whether more exist. NSFW posts are always left out."
+bin = "reddit"
+args = ["search"]
+safety = "read"
+  [[tool.param]]
+  name = "query"
+  type = "string"
+  flag = "--query"
+  required = true
+  description = "Keyword or topic to search Reddit for."
+  [[tool.param]]
+  name = "subreddit"
+  type = "string"
+  flag = "--subreddit"
+  description = "Narrow the search to this subreddit (name without r/)."
+  [[tool.param]]
+  name = "account"
+  type = "string"
+  flag = "--account"
+  description = "Account name from the reddit config. Optional when there is one account or a default."
+
+[[tool]]
+name = "reddit_fetch"
+description = "Fetch one Reddit post's full text (or link) and its top-level comments, best first (at most 20, each truncated at 2000 characters). Accepts a post URL, a bare post id, or a t3_ fullname. NSFW posts are refused."
+bin = "reddit"
+args = ["fetch"]
+safety = "read"
+  [[tool.param]]
+  name = "post"
+  type = "string"
+  positional = true
+  required = true
+  description = "A full Reddit post URL, a bare post id, or a t3_ fullname."
+  [[tool.param]]
+  name = "account"
+  type = "string"
+  flag = "--account"
+  description = "Account name from the reddit config."
+
+[[tool]]
+name = "reddit_read"
+description = "Call any read-only Reddit API endpoint by name and return its JSON. Use reddit_endpoints first to see the endpoint names and their parameters. This can reach endpoints beyond search and fetch, such as subreddit_listing or subreddit_about, and any the owner has added."
+bin = "reddit"
+args = ["call", "--max-safety=read"]
+safety = "read"
+timeout = "90s"
+  [[tool.param]]
+  name = "endpoint"
+  type = "string"
+  positional = true
+  required = true
+  description = "Endpoint name, e.g. subreddit_about."
+  [[tool.param]]
+  name = "params"
+  type = "map"
+  flag = "--param"
+  description = "The endpoint's parameters as an object of strings, e.g. {\"subreddit\": \"golang\"}."
+  [[tool.param]]
+  name = "pages"
+  type = "integer"
+  flag = "--pages"
+  description = "For endpoints that paginate: follow the cursor for up to this many pages."
+  [[tool.param]]
+  name = "account"
+  type = "string"
+  flag = "--account"
+  description = "Account name from the reddit config."
+
+[[tool]]
+name = "reddit_endpoints"
+description = "List the Reddit API endpoints available to reddit_read, or describe one in detail (parameters, types, which are required)."
+bin = "reddit"
+args = ["endpoints"]
+safety = "read"
+  [[tool.param]]
+  name = "endpoint"
+  type = "string"
+  positional = true
+  description = "Describe this one endpoint. Omit to list all."

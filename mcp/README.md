@@ -72,7 +72,7 @@ That one command:
 Check it:
 
 ```bash
-agent-tools-mcp -list          # the tools it will serve (34)
+agent-tools-mcp -list          # the tools it will serve (38)
 claude mcp list                # agent-tools: ... ✔ Connected
 codex mcp list                 # agent-tools ... enabled
 grok mcp list                  # agent-tools: ...
@@ -90,6 +90,7 @@ Do it once, in a terminal, the same way you would without the server.
 | `slack_*` | `notif-slack init`, then add a bot token to `~/.config/notif-slack/config.toml`; check with `notif-slack check` | [notif-slack/README.md](../tools/notif-slack/README.md) |
 | `tg_*` | `notif-tg init`, add a BotFather token; check with `notif-tg check` | [notif-tg/README.md](../tools/notif-tg/README.md) |
 | `wharf_*` | a `.wharf` file at the root of your site repo | [wharf/README.md](../tools/wharf/README.md) |
+| `reddit_*` | `reddit init`, then add a Reddit app's client id and secret to `~/.config/reddit/config.toml`; check with `reddit check` | [reddit/README.md](../tools/reddit/README.md) |
 | `docli_*` | `DIGITALOCEAN_TOKEN`, or a token in `~/.config/docli/token` (mode 0600) | [docli/README.md](../tools/docli/README.md) |
 
 Two of those are per project: **wharf** reads `.wharf` and **docli plan** reads
@@ -171,7 +172,7 @@ Tips:
 
 ## Tool reference
 
-34 tools. **Read** tools change nothing. **Write** tools change something
+38 tools. **Read** tools change nothing. **Write** tools change something
 reversible or additive. No destructive tool ships built in.
 
 | Group | Tool | Safety | What it does |
@@ -190,6 +191,9 @@ reversible or additive. No destructive tool ships built in.
 | | `wharf_restore_list` | read | Local pre-overwrite backups |
 | | `wharf_copy` | write | Upload one file (backs up the old remote file first) |
 | | `wharf_pull`, `wharf_mkdir`, `wharf_explore` | write | Download, create a directory, write `WHARF.md` |
+| Reddit | `reddit_search`, `reddit_fetch` | read | Search; one post with its best comments |
+| | `reddit_read` | read | Call any read-only Reddit endpoint by name, including ones you add under `~/.config/reddit/endpoints.d` |
+| | `reddit_endpoints` | read | List endpoints or show one's parameters |
 | docli | `docli_token_check`, `docli_sizes`, `docli_regions`, `docli_images` | read | Account and catalog |
 | | `docli_droplet_list`, `docli_droplet_get`, `docli_vpc_list`, `docli_firewall_list`, `docli_ssh_key_list`, `docli_db_list`, `docli_domain_list`, `docli_dns_list` | read | Inventory |
 | | `docli_plan` | read | What `apply` would change and cost. Exit code 2 ("there are changes") is a normal result |
