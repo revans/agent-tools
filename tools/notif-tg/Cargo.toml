@@ -4,6 +4,7 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
+agent-config.workspace = true
 anyhow.workspace = true
 clap.workspace = true
 dirs.workspace = true

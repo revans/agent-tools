@@ -80,6 +80,15 @@ enum Cmd {
     },
     /// Print the resolved config, template and state paths.
     Where,
+    /// Move this tool's own config file into the shared agent-tools config file.
+    Migrate {
+        /// The file to move. Default: ~/.config/notif-tg/config.toml.
+        #[arg(long, value_name = "FILE")]
+        from: Option<PathBuf>,
+        /// The shared file to add it to. Default: ~/.config/agent-tools/config.toml.
+        #[arg(long, value_name = "FILE")]
+        to: Option<PathBuf>,
+    },
 }
 
 #[derive(Args, Debug)]
@@ -207,6 +216,7 @@ fn run() -> Result<()> {
         Cmd::Discover { account, json } => cmd_discover(p, account.as_deref(), json),
         Cmd::Init { force } => cmd_init(p, force),
         Cmd::Where => cmd_where(p),
+        Cmd::Migrate { from, to } => cmd_migrate(from, to),
     }
 }
 
@@ -1003,6 +1013,12 @@ fn cmd_where(cfg_path: Option<&Path>) -> Result<()> {
     match Config::load(cfg_path) {
         Ok(cfg) => {
             println!("config:    {}", cfg.path.display());
+            if cfg.unified {
+                println!(
+                    "           (the shared agent-tools file; this tool's settings are its [{}] table)",
+                    config::TOOL
+                );
+            }
             println!("templates: {}", cfg.template_dir().display());
             println!("state:     {}", cfg.state_dir().display());
             let offsets = state::Offsets::new(cfg.state_dir());
@@ -1024,23 +1040,37 @@ fn cmd_where(cfg_path: Option<&Path>) -> Result<()> {
 }
 
 fn cmd_init(cfg_path: Option<&Path>, force: bool) -> Result<()> {
-    let path = match cfg_path {
-        Some(p) => p.to_path_buf(),
-        None => config::default_config_path(),
+    // With --config the file is this tool's own, as before. Otherwise settings go
+    // into the shared agent-tools file, beside any other tool's.
+    let (path, tpl_dir) = match cfg_path {
+        Some(p) => {
+            if p.exists() && !force {
+                bail!("{} already exists (use --force to overwrite)", p.display());
+            }
+            if let Some(parent) = p.parent() {
+                std::fs::create_dir_all(parent)
+                    .with_context(|| format!("creating {}", parent.display()))?;
+            }
+            write_private(p, EXAMPLE_CONFIG)?;
+            (
+                p.to_path_buf(),
+                p.parent().unwrap_or(Path::new(".")).join("templates"),
+            )
+        }
+        None => {
+            if force {
+                bail!("--force only applies with --config; the shared file is never overwritten");
+            }
+            let dest = config::default_config_path();
+            agent_config::init_unified(config::TOOL, EXAMPLE_CONFIG, &dest)?;
+            let dir = dest
+                .parent()
+                .unwrap_or(Path::new("."))
+                .join(config::TOOL)
+                .join("templates");
+            (dest, dir)
+        }
     };
-    if path.exists() && !force {
-        bail!(
-            "{} already exists (use --force to overwrite)",
-            path.display()
-        );
-    }
-    if let Some(parent) = path.parent() {
-        std::fs::create_dir_all(parent)
-            .with_context(|| format!("creating {}", parent.display()))?;
-    }
-    write_private(&path, EXAMPLE_CONFIG)?;
-
-    let tpl_dir = path.parent().unwrap_or(Path::new(".")).join("templates");
     std::fs::create_dir_all(&tpl_dir).with_context(|| format!("creating {}", tpl_dir.display()))?;
     for (name, body) in EXAMPLE_TEMPLATES {
         let dest = tpl_dir.join(name);
@@ -1053,6 +1083,60 @@ fn cmd_init(cfg_path: Option<&Path>, force: bool) -> Result<()> {
     println!("notif-tg: templates live in {}", tpl_dir.display());
     println!("notif-tg: add a bot token from @BotFather, then run `notif-tg check`");
     Ok(())
+}
+
+/// Adds this tool's own older config file to the shared agent-tools file, and
+/// brings its templates along. The old file is left in place; once this works the
+/// shared file takes precedence over it. Read positions (`state_dir`) are not
+/// touched: they live outside the config directory.
+fn cmd_migrate(from: Option<PathBuf>, to: Option<PathBuf>) -> Result<()> {
+    let from = from.unwrap_or_else(config::legacy_config_path);
+    let to = to.unwrap_or_else(config::default_config_path);
+    if !from.exists() {
+        bail!("nothing to migrate: {} does not exist", from.display());
+    }
+    let old: Config = {
+        let text = std::fs::read_to_string(&from)
+            .with_context(|| format!("reading {}", from.display()))?;
+        toml::from_str(&text).with_context(|| format!("parsing {}", from.display()))?
+    };
+    agent_config::migrate_into(config::TOOL, &from, &to)?;
+    let old_templates = old_template_dir(&old, &from);
+    let new_dir = to.parent().unwrap_or(Path::new(".")).join(config::TOOL);
+    let new_templates = match &old.template_dir {
+        Some(t) if PathBuf::from(config::expand_tilde(t)).is_absolute() => None,
+        Some(t) => Some(new_dir.join(t)),
+        None => Some(new_dir.join("templates")),
+    };
+    println!("notif-tg: added [{}] to {}", config::TOOL, to.display());
+    if let Some(dest) = new_templates {
+        let n = agent_config::copy_markdown_files(&old_templates, &dest)?;
+        println!("notif-tg: copied {n} template(s) to {}", dest.display());
+    } else {
+        println!("notif-tg: template_dir is an absolute path, so templates stay where they are");
+    }
+    if matches!(&old.state_dir, Some(t) if !PathBuf::from(config::expand_tilde(t)).is_absolute()) {
+        println!(
+            "notif-tg: note: state_dir is a relative path, which now resolves against {}",
+            new_dir.display()
+        );
+    }
+    println!(
+        "notif-tg: {} was left in place; the shared file now takes precedence, so you can delete it once `notif-tg check` passes",
+        from.display()
+    );
+    Ok(())
+}
+
+fn old_template_dir(old: &Config, file: &Path) -> PathBuf {
+    let dir = file.parent().unwrap_or(Path::new("."));
+    match &old.template_dir {
+        Some(t) => {
+            let p = PathBuf::from(config::expand_tilde(t));
+            if p.is_absolute() { p } else { dir.join(p) }
+        }
+        None => dir.join("templates"),
+    }
 }
 
 /// Writes with mode 0600 so a token never lands in a world-readable file.

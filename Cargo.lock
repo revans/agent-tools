@@ -832,6 +832,7 @@ checksum = "743fb55ba31b18fb1ecef6bdc9aa2743314978ac084044301a7eee33fb99a20d"
 name = "notif-slack"
 version = "0.1.0"
 dependencies = [
+ "agent-config",
  "anyhow",
  "clap",
  "dirs",
@@ -846,6 +847,7 @@ dependencies = [
 name = "notif-tg"
 version = "0.1.0"
 dependencies = [
+ "agent-config",
  "anyhow",
  "clap",
  "dirs",

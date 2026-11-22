@@ -1,9 +1,12 @@
 //! Loading and resolution of the external credentials/config TOML.
 
-use anyhow::{Context, Result, anyhow, bail};
+use anyhow::{Context, Result, bail};
 use serde::Deserialize;
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
+
+/// The name of this tool in the shared config file and in error messages.
+pub const TOOL: &str = "notif-tg";
 
 /// Top level of `config.toml`.
 #[derive(Debug, Deserialize)]
@@ -24,6 +27,11 @@ pub struct Config {
 
     #[serde(skip)]
     pub path: PathBuf,
+    /// True when the settings came from the shared agent-tools file.
+    #[serde(skip)]
+    pub unified: bool,
+    #[serde(skip)]
+    dir: PathBuf,
 }
 
 /// One Telegram bot. The account key is how you address it: `--account gierd`.
@@ -106,65 +114,43 @@ pub struct ResolvedChat {
 }
 
 impl Config {
-    /// Resolution order: `--config`, `$NOTIF_TG_CONFIG`, `$XDG_CONFIG_HOME/notif-tg/config.toml`,
-    /// `~/.config/notif-tg/config.toml`, then `./notif-tg.toml`.
-    pub fn locate(explicit: Option<&Path>) -> Result<PathBuf> {
-        if let Some(p) = explicit {
-            if !p.exists() {
-                bail!("config file not found: {}", p.display());
-            }
-            return Ok(p.to_path_buf());
-        }
-        if let Ok(p) = std::env::var("NOTIF_TG_CONFIG") {
-            let p = PathBuf::from(expand_tilde(&p));
-            if !p.exists() {
-                bail!("NOTIF_TG_CONFIG points at a missing file: {}", p.display());
-            }
-            return Ok(p);
-        }
-        let candidates = [default_config_path(), PathBuf::from("notif-tg.toml")];
-        for c in &candidates {
-            if c.exists() {
-                return Ok(c.clone());
-            }
-        }
-        Err(anyhow!(
-            "no config file found (looked at {}). Run `notif-tg init` to create one.",
-            candidates
-                .iter()
-                .map(|c| c.display().to_string())
-                .collect::<Vec<_>>()
-                .join(", ")
-        ))
-    }
-
+    /// Finds and reads the settings. Lookup order: `--config`, `$NOTIF_TG_CONFIG`,
+    /// `./agent-tools.toml` and `~/.config/agent-tools/config.toml` (each only if it
+    /// has a `[notif-tg]` table), then `~/.config/notif-tg/config.toml`, then
+    /// `./notif-tg.toml`. See the `agent-config` crate.
     pub fn load(explicit: Option<&Path>) -> Result<Config> {
-        let path = Self::locate(explicit)?;
-        let raw = std::fs::read_to_string(&path)
-            .with_context(|| format!("reading {}", path.display()))?;
-        let mut cfg: Config =
-            toml::from_str(&raw).with_context(|| format!("parsing {}", path.display()))?;
-        cfg.path = path;
+        let located = agent_config::locate(TOOL, explicit)?;
+        let mut cfg: Config = located.parse()?;
+        cfg.path = located.path.clone();
+        cfg.unified = located.unified;
+        cfg.dir = located.dir();
         if cfg.accounts.is_empty() {
-            bail!("{} defines no [accounts.*] tables", cfg.path.display());
+            bail!("{} defines no [accounts.*] tables", cfg.where_defined());
         }
         if let Some(d) = &cfg.default_account
             && !cfg.accounts.contains_key(d)
         {
             bail!(
                 "default_account = \"{d}\" is not defined in {}",
-                cfg.path.display()
+                cfg.where_defined()
             );
         }
         Ok(cfg)
     }
 
-    /// Directory holding the config file; templates and relative paths hang off it.
+    /// For messages: the file, and the table inside it when the file is shared.
+    pub fn where_defined(&self) -> String {
+        if self.unified {
+            format!("[{TOOL}] in {}", self.path.display())
+        } else {
+            self.path.display().to_string()
+        }
+    }
+
+    /// The directory this tool keeps its own files in. Templates and relative
+    /// paths hang off it: beside its own config file, or `<shared dir>/notif-tg`.
     pub fn dir(&self) -> PathBuf {
-        self.path
-            .parent()
-            .map(Path::to_path_buf)
-            .unwrap_or_else(|| PathBuf::from("."))
+        self.dir.clone()
     }
 
     pub fn template_dir(&self) -> PathBuf {
@@ -339,17 +325,14 @@ pub fn is_raw_chat_id(s: &str) -> bool {
     !digits.is_empty() && digits.chars().all(|c| c.is_ascii_digit())
 }
 
+/// Where `init` writes: the shared agent-tools file.
 pub fn default_config_path() -> PathBuf {
-    config_home().join("notif-tg").join("config.toml")
+    agent_config::user_config_path()
 }
 
-fn config_home() -> PathBuf {
-    if let Ok(x) = std::env::var("XDG_CONFIG_HOME")
-        && !x.is_empty()
-    {
-        return PathBuf::from(x);
-    }
-    home().join(".config")
+/// The tool's own older file, which `migrate` reads by default.
+pub fn legacy_config_path() -> PathBuf {
+    agent_config::legacy_path_in(&agent_config::config_home(), TOOL)
 }
 
 pub fn default_state_dir() -> PathBuf {
@@ -409,5 +392,88 @@ mod tests {
     #[test]
     fn token_is_redacted_but_identifiable() {
         assert_eq!(redact("123456789:AAEhBOweik6ad6PsVWxyz"), "123456789:…xyz");
+    }
+}
+
+#[cfg(test)]
+mod shared_file_tests {
+    use super::*;
+
+    /// A private scratch directory that cleans up after itself.
+    struct Scratch(PathBuf);
+    impl Scratch {
+        fn new() -> Self {
+            use std::sync::atomic::{AtomicU32, Ordering};
+            static N: AtomicU32 = AtomicU32::new(0);
+            let p = std::env::temp_dir().join(format!(
+                "notif-tg-config-test-{}-{}",
+                std::process::id(),
+                N.fetch_add(1, Ordering::SeqCst)
+            ));
+            std::fs::create_dir_all(&p).unwrap();
+            Scratch(p)
+        }
+        fn file(&self, name: &str, body: &str) -> PathBuf {
+            use std::os::unix::fs::PermissionsExt;
+            let p = self.0.join(name);
+            std::fs::create_dir_all(p.parent().unwrap()).unwrap();
+            std::fs::write(&p, body).unwrap();
+            std::fs::set_permissions(&p, std::fs::Permissions::from_mode(0o600)).unwrap();
+            p
+        }
+    }
+    impl Drop for Scratch {
+        fn drop(&mut self) {
+            let _ = std::fs::remove_dir_all(&self.0);
+        }
+    }
+
+    const OWN: &str =
+        "default_account = \"a\"\nstate_dir = \"mystate\"\n[accounts.a]\ntoken_env = \"T\"\n";
+    const SHARED: &str = "[reddit]\nclient_id = \"x\"\n\n[notif-tg]\ndefault_account = \"a\"\nstate_dir = \"mystate\"\n[notif-tg.accounts.a]\ntoken_env = \"T\"\n\n[x.accounts.m]\nanything = 1\n";
+
+    #[test]
+    fn loads_from_the_shared_file_beside_other_tools_tables() {
+        let s = Scratch::new();
+        let path = s.file("agent-tools/config.toml", SHARED);
+        let cfg = Config::load(Some(&path)).unwrap();
+        assert!(cfg.unified);
+        assert_eq!(cfg.account(None).unwrap().0, "a");
+        assert_eq!(cfg.dir(), s.0.join("agent-tools/notif-tg"));
+        assert_eq!(
+            cfg.template_dir(),
+            s.0.join("agent-tools/notif-tg/templates")
+        );
+    }
+
+    #[test]
+    fn the_tools_own_file_still_loads_as_before() {
+        let s = Scratch::new();
+        let path = s.file("notif-tg/config.toml", OWN);
+        let cfg = Config::load(Some(&path)).unwrap();
+        assert!(!cfg.unified);
+        assert_eq!(cfg.dir(), s.0.join("notif-tg"));
+        assert_eq!(cfg.template_dir(), s.0.join("notif-tg/templates"));
+    }
+
+    #[test]
+    fn a_mistake_inside_this_tools_table_is_still_caught() {
+        let s = Scratch::new();
+        let bad = SHARED.replace("token_env = \"T\"", "token_env = \"T\"\ntypo_field = 1");
+        let path = s.file("agent-tools/config.toml", &bad);
+        let e = format!("{:#}", Config::load(Some(&path)).unwrap_err());
+        assert!(e.contains("typo_field") && e.contains("[notif-tg]"), "{e}");
+    }
+
+    #[test]
+    fn errors_name_the_table_when_the_file_is_shared() {
+        let s = Scratch::new();
+        let bad = SHARED.replace("default_account = \"a\"", "default_account = \"nope\"");
+        let path = s.file("agent-tools/config.toml", &bad);
+        let e = Config::load(Some(&path)).unwrap_err().to_string();
+        assert!(
+            e.contains("[notif-tg] in ") && e.contains("config.toml"),
+            "{e}"
+        );
     }
 }

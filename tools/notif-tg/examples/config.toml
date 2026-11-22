@@ -1,9 +1,12 @@
 # notif-tg — Telegram bots, chats and credentials.
 #
-# Location (first match wins):
-#   --config <path> | $NOTIF_TG_CONFIG | ~/.config/notif-tg/config.toml | ./notif-tg.toml
+# Where this lives (first match wins):
+#   --config <path> | $NOTIF_TG_CONFIG
+#   ./agent-tools.toml, then ~/.config/agent-tools/config.toml -- the shared file, where
+#       these settings sit under a [notif-tg] table beside other tools' tables
+#   ~/.config/notif-tg/config.toml | ./notif-tg.toml -- this tool's own file
 #
-# Keep this file at mode 0600 if you store tokens inline:  chmod 600 config.toml
+# Keep the file at mode 0600; the shared file is refused otherwise:  chmod 600 FILE
 
 default_account = "gierd"
 
