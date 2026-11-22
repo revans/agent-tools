@@ -16,13 +16,16 @@ BINS    := $(CRATES) wharf
 TARGET  := $(ROOT)/target/release
 
 .DEFAULT_GOAL := build
-.PHONY: all build debug $(CRATES) wharf test-wharf install-wharf uninstall-wharf test lint fmt fmt-check check install uninstall skills unskills clean distclean help
+DOCLI_VERSION ?= $(or $(shell git describe --tags --match 'v*' --always --dirty 2>/dev/null | sed 's/^v//'),dev)
+
+.PHONY: all build debug $(CRATES) wharf docli test-docli install-docli uninstall-docli test-wharf install-wharf uninstall-wharf test lint fmt fmt-check check install uninstall skills unskills clean distclean help
 
 all: build
 
 build: ## Build every binary in release mode
 	$(CARGO) build --release --workspace
 	$(MAKE) wharf
+	$(MAKE) docli
 
 debug: ## Build every binary in debug mode
 	$(CARGO) build --workspace
@@ -37,10 +40,25 @@ wharf: ## Build only the wharf (SFTP deploy) binary
 	@mkdir -p "$(TARGET)"
 	cd "$(ROOT)/wharf" && $(GO) build -o "$(TARGET)/wharf" .
 
+docli: ## Build only docli (DigitalOcean)
+	@mkdir -p "$(TARGET)"
+	cd "$(ROOT)/docli" && $(GO) build -trimpath -ldflags "-s -w -X main.version=$(DOCLI_VERSION)" -o "$(TARGET)/docli" .
+
+test-docli: ## Vet and test docli (a fake DigitalOcean API only)
+	cd "$(ROOT)/docli" && $(GO) vet ./... && $(GO) test ./...
+
+install-docli: docli ## Install docli into PREFIX/bin
+	@mkdir -p "$(PREFIX)/bin"
+	install -m 0755 "$(TARGET)/docli" "$(PREFIX)/bin/docli"
+	@echo "installed docli -> $(PREFIX)/bin/docli"
+
+uninstall-docli: ## Remove docli from PREFIX/bin
+	@rm -f "$(PREFIX)/bin/docli"
+
 test-wharf: ## Vet and test wharf
 	cd "$(ROOT)/wharf" && $(GO) vet ./... && $(GO) test ./...
 
-test: test-wharf ## Run the test suite
+test: test-wharf test-docli ## Run the test suite
 	$(CARGO) test --workspace
 
 lint: ## Run clippy, treating warnings as errors
@@ -54,7 +72,7 @@ fmt-check: ## Fail if the source is not formatted
 
 check: fmt-check lint test ## Everything CI would run
 
-install: install-wharf ## Install every binary into PREFIX/bin (default ~/.cargo/bin)
+install: install-wharf install-docli ## Install every binary into PREFIX/bin (default ~/.cargo/bin)
 	@for c in $(CRATES); do \
 		echo "installing $$c -> $(PREFIX)/bin/$$c"; \
 		$(CARGO) install --path "$(ROOT)/$$c" --root "$(PREFIX)" --locked --force || exit 1; \
@@ -73,6 +91,7 @@ uninstall: ## Remove every binary from PREFIX/bin
 		$(CARGO) uninstall --root "$(PREFIX)" "$$c" || true; \
 	done
 	@$(MAKE) uninstall-wharf
+	@$(MAKE) uninstall-docli
 
 skills: ## Symlink the Claude Code skills into SKILLS_DIR
 	@mkdir -p "$(SKILLS_DIR)"
