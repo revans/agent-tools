@@ -253,7 +253,7 @@ func TestReport(t *testing.T) {
 	rec(t, l, postlog.Entry{Platform: "x", Kind: "reply", Target: "1", RemoteID: "3", Text: "unmeasured", At: ago(1 * 24 * time.Hour)})
 	rec(t, l, postlog.Entry{Platform: "instagram", RemoteID: "4", Text: "old", At: ago(60 * 24 * time.Hour)})
 	l.AddSnapshot(postlog.Snapshot{PostID: a.ID, At: ago(48 * time.Hour), Data: map[string]any{"like_count": 1, "reply_count": 1}})
-	l.AddSnapshot(postlog.Snapshot{PostID: a.ID, At: ago(1 * time.Hour), Data: map[string]any{"like_count": 100, "reply_count": 4, "text": "ignored"}})
+	l.AddSnapshot(postlog.Snapshot{PostID: a.ID, At: ago(1 * time.Hour), Data: map[string]any{"like_count": 100, "reply_count": 4, "impression_count": 9000, "text": "ignored"}})
 	l.AddSnapshot(postlog.Snapshot{PostID: b.ID, Data: map[string]any{"like_count": 10}})
 
 	code, out, errs := do(t, "", "report")
@@ -265,42 +265,113 @@ func TestReport(t *testing.T) {
 		t.Errorf("published: %v", r["published"])
 	}
 	bp := r["by_platform"].(map[string]any)
-	if bp["x"].(map[string]any)["posts"].(float64) != 2 || bp["x"].(map[string]any)["replys"] != nil && false {
+	if bp["x"].(map[string]any)["posts"].(float64) != 2 {
 		t.Errorf("by platform: %v", bp)
 	}
 	xm := r["metrics"].(map[string]any)["x"].(map[string]any)
 	if xm["posts_measured"].(float64) != 2 {
 		t.Errorf("two posts were measured: %v", xm)
 	}
-	if got := xm["totals"].(map[string]any)["like_count"].(float64); got != 110 {
-		t.Errorf("only each post's LATEST reading counts (100 + 10, not 1): %v", got)
+	tot, avg := xm["totals"].(map[string]any), xm["averages"].(map[string]any)
+	if tot["likes"].(float64) != 110 {
+		t.Errorf("only each post's LATEST reading counts (100 + 10, not 1), in the common vocabulary: %v", tot)
 	}
-	if got := xm["averages"].(map[string]any)["like_count"].(float64); got != 55 {
-		t.Errorf("average: %v", got)
+	if avg["likes"].(float64) != 55 || avg["comments"].(float64) != 4 || avg["views"].(float64) != 9000 {
+		t.Errorf("an average is over the posts that HAVE the metric: %v", avg)
 	}
-	if got := xm["averages"].(map[string]any)["reply_count"].(float64); got != 4 {
-		t.Errorf("an average is over the posts that HAVE the metric (one here): %v", got)
+	if _, has := tot["like_count"]; has {
+		t.Error("raw platform names do not appear in the totals")
 	}
-	if _, has := xm["totals"].(map[string]any)["text"]; has {
+	if _, has := tot["text"]; has {
 		t.Error("non-numeric fields are not metrics")
 	}
 	top := r["top"].([]any)
-	if r["ranked_by"] != "like_count" || len(top) != 2 || top[0].(map[string]any)["remote_id"] != "1" || top[0].(map[string]any)["like_count"].(float64) != 100 {
+	if r["ranked_by"] != "likes" || len(top) != 2 || top[0].(map[string]any)["remote_id"] != "1" || top[0].(map[string]any)["likes"].(float64) != 100 {
 		t.Errorf("top: %v by %v", top, r["ranked_by"])
 	}
 	if _, has := r["note"]; has {
 		t.Error("no note when there are metrics")
 	}
 
-	_, out, _ = do(t, "", "report", "--since", "7d", "--top", "1", "--by", "reply_count")
+	_, out, _ = do(t, "", "report", "--since", "7d", "--top", "1", "--by", "comments")
 	r = jsonOut(t, out).(map[string]any)
-	if r["published"].(float64) != 3 || r["ranked_by"] != "reply_count" || len(r["top"].([]any)) != 1 {
+	if r["published"].(float64) != 3 || r["ranked_by"] != "comments" || len(r["top"].([]any)) != 1 {
 		t.Errorf("--since/--top/--by: %v", r)
+	}
+	_, out, _ = do(t, "", "report", "--by", "views")
+	if top := jsonOut(t, out).(map[string]any)["top"].([]any); len(top) != 1 || top[0].(map[string]any)["views"].(float64) != 9000 {
+		t.Errorf("only the post that has views is ranked by views: %v", top)
 	}
 	_, out, _ = do(t, "", "report", "--platform", "instagram")
 	r = jsonOut(t, out).(map[string]any)
 	if r["published"].(float64) != 1 || r["note"] == nil {
 		t.Errorf("a platform with no readings says so: %v", r)
+	}
+}
+
+func TestStatsUseOneVocabularyAcrossPlatforms(t *testing.T) {
+	cases := map[string]struct {
+		in   any
+		want map[string]float64
+	}{
+		"x":                {map[string]any{"impression_count": 900.0, "like_count": 12.0, "reply_count": 3.0, "repost_count": 2.0, "quote_count": 1.0, "bookmark_count": 4.0, "id": "123"}, map[string]float64{"views": 900, "likes": 12, "comments": 3, "shares": 2, "quotes": 1, "saves": 4}},
+		"youtube strings":  {map[string]any{"viewCount": "1500", "likeCount": "40", "commentCount": "7", "favoriteCount": "0"}, map[string]float64{"views": 1500, "likes": 40, "comments": 7}},
+		"instagram":        {map[string]any{"like_count": 5.0, "comments_count": 2.0, "views": 80.0, "reach": 60.0, "saved": 3.0, "shares": 1.0, "media_type": "IMAGE"}, map[string]float64{"views": 80, "likes": 5, "comments": 2, "reach": 60, "saves": 3, "shares": 1}},
+		"reddit":           {map[string]any{"score": 321.0, "num_comments": 14.0, "ups": 321.0}, map[string]float64{"comments": 14}},
+		"nested x":         {map[string]any{"id": "1", "public_metrics": map[string]any{"like_count": 8.0, "reply_count": 1.0}}, map[string]float64{"likes": 8, "comments": 1}},
+		"a canonical name": {map[string]any{"likes": 9.0, "like_count": 100.0}, map[string]float64{"likes": 9}},
+		"nothing known":    {map[string]any{"foo": 1.0}, nil},
+		"not an object":    {[]any{1.0}, nil},
+	}
+	for name, c := range cases {
+		got := stats(c.in, nil)
+		if len(got) != len(c.want) {
+			t.Errorf("%s: got %v want %v", name, got, c.want)
+			continue
+		}
+		for k, v := range c.want {
+			if got[k] != v {
+				t.Errorf("%s: %s = %v, want %v (%v)", name, k, got[k], v, got)
+			}
+		}
+	}
+	if got := stats(map[string]any{"clicks": 7.0, "like_count": 3.0}, map[string]string{"clicks": "views", "like_count": "reactions"}); got["views"] != 7 || got["reactions"] != 3 || len(got) != 2 {
+		t.Errorf("a [posts.metrics.rename] entry wins over the built-in names: %v", got)
+	}
+	if whole(map[string]float64{"a": 12, "b": 1.5})["a"] != int64(12) {
+		t.Error("a whole number prints without a decimal point")
+	}
+}
+
+func TestListAndShowCarryStatsAlongsideTheRawReading(t *testing.T) {
+	l := newLedger(t)
+	p := rec(t, l, postlog.Entry{Platform: "youtube", RemoteID: "vid1", Text: "a video"})
+	l.AddSnapshot(postlog.Snapshot{PostID: p.ID, Data: map[string]any{"viewCount": "1500", "likeCount": "40", "weird": "x"}})
+	got := list(t)[0]
+	st := got["stats"].(map[string]any)
+	if st["views"].(float64) != 1500 || st["likes"].(float64) != 40 {
+		t.Errorf("stats: %v", st)
+	}
+	if got["metrics"].(map[string]any)["viewCount"] != "1500" {
+		t.Errorf("the raw reading is kept exactly as the platform gave it: %v", got["metrics"])
+	}
+	_, out, _ := do(t, "", "show", "vid1")
+	if jsonOut(t, out).(map[string]any)["post"].(map[string]any)["stats"] == nil {
+		t.Error("show carries stats too")
+	}
+	// a rename from the config applies to list
+	cfg := filepath.Join(t.TempDir(), "agent-tools.toml")
+	os.WriteFile(cfg, []byte("[posts]\n[posts.metrics.rename]\nweird = \"saves\"\nviewCount = \"impressions_seen\"\n"), 0o600)
+	_, out, _ = do(t, "", "list", "--config", cfg)
+	st = jsonOut(t, out).([]any)[0].(map[string]any)["stats"].(map[string]any)
+	if st["impressions_seen"] == nil || st["views"] != nil {
+		t.Errorf("a configured rename wins: %v", st)
+	}
+	for _, bad := range []string{"[posts]\nmetrics = 3\n", "[posts.metrics]\nrename = 3\n", "[posts.metrics.rename]\nx = 3\n"} {
+		os.WriteFile(cfg, []byte(bad), 0o600)
+		if code, _, _ := do(t, "", "list", "--config", cfg); code != 1 {
+			t.Errorf("a malformed [posts.metrics] is an error: %q", bad)
+		}
 	}
 }
 
@@ -495,5 +566,110 @@ func TestRefreshOneByID(t *testing.T) {
 	}
 	if code, _, _ := do(t, "", "refresh", "a", "b", "--config", cfg); code != 2 {
 		t.Error("at most one id")
+	}
+}
+
+func TestRefreshStaleSkipsPostsThatWereReadRecently(t *testing.T) {
+	l := newLedger(t)
+	fresh := rec(t, l, postlog.Entry{Platform: "x", Account: "main", RemoteID: "fresh", Text: "read an hour ago", At: ago(5 * time.Hour)})
+	rec(t, l, postlog.Entry{Platform: "x", Account: "main", RemoteID: "old", Text: "read two days ago", At: ago(4 * 24 * time.Hour)})
+	rec(t, l, postlog.Entry{Platform: "x", Account: "main", RemoteID: "never", Text: "never read", At: ago(3 * time.Hour)})
+	l.AddSnapshot(postlog.Snapshot{PostID: fresh.ID, At: ago(1 * time.Hour), Data: map[string]any{"like_count": 1}})
+	old, _ := l.Read()
+	for _, e := range old.Entries {
+		if e.RemoteID == "old" {
+			l.AddSnapshot(postlog.Snapshot{PostID: e.ID, At: ago(48 * time.Hour), Data: map[string]any{"like_count": 1}})
+		}
+	}
+	s := script(t, `printf '{"like_count":9}'`)
+	cfg := refreshConfig(t, "x", fmt.Sprintf(`[%q, "{remote_id}"]`, s), "")
+	code, out, errs := do(t, "", "refresh", "--config", cfg, "--stale", "6h")
+	if code != 0 {
+		t.Fatalf("%d %s", code, errs)
+	}
+	got := map[string]map[string]any{}
+	for _, r := range jsonOut(t, out).([]any) {
+		m := r.(map[string]any)
+		got[m["remote_id"].(string)] = m
+	}
+	if sk, _ := got["fresh"]["skipped"].(string); !strings.Contains(sk, "newer than --stale 6h") {
+		t.Errorf("a post read an hour ago is skipped: %v", got["fresh"])
+	}
+	if got["old"]["ok"] != true || got["never"]["ok"] != true {
+		t.Errorf("a post read two days ago, and one never read, are refreshed: %v %v", got["old"], got["never"])
+	}
+	// without --stale everything is read
+	_, out, _ = do(t, "", "refresh", "--config", cfg)
+	for _, r := range jsonOut(t, out).([]any) {
+		if r.(map[string]any)["ok"] != true {
+			t.Errorf("no --stale means read them all: %v", r)
+		}
+	}
+	for _, bad := range []string{"soon", "0h", "x"} {
+		if code, _, _ := do(t, "", "refresh", "--config", cfg, "--stale", bad); code != 2 {
+			t.Errorf("--stale %q is a usage error: %d", bad, code)
+		}
+	}
+}
+
+func TestDefaultRefreshCommandsExistForTheTools(t *testing.T) {
+	l := newLedger(t)
+	for _, p := range []string{"x", "instagram", "youtube", "reddit"} {
+		rec(t, l, postlog.Entry{Platform: p, Account: "main", RemoteID: "id-" + p, Text: "t " + p})
+	}
+	rec(t, l, postlog.Entry{Platform: "linkedin", Account: "main", RemoteID: "urn", Text: "t li"})
+	_, out, _ := do(t, "", "refresh", "--dry-run")
+	cmds := map[string]string{}
+	skipped := ""
+	for _, r := range jsonOut(t, out).([]any) {
+		m := r.(map[string]any)
+		if c, ok := m["command"].([]any); ok {
+			cmds[m["platform"].(string)] = fmt.Sprint(c)
+		} else if m["platform"] == "linkedin" {
+			skipped, _ = m["skipped"].(string)
+		}
+	}
+	want := map[string]string{
+		"x":         "[x thread id-x --account main]",
+		"instagram": "[instagram metrics id-instagram --account main]",
+		"youtube":   "[youtube call videos --param id=id-youtube --account main]",
+		"reddit":    "[reddit call post_comments --param id=id-reddit --account main]",
+	}
+	for p, w := range want {
+		if cmds[p] != w {
+			t.Errorf("%s: %q, want %q", p, cmds[p], w)
+		}
+	}
+	if !strings.Contains(skipped, "no refresh command is configured for linkedin") {
+		t.Errorf("linkedin has no default: %q", skipped)
+	}
+}
+
+func TestAReadingNestedAndTopLevelOfTheSameNameKeepsTheTopLevel(t *testing.T) {
+	// "a_metrics" sorts before "like_count", and "z_metrics" after it
+	for _, m := range []map[string]any{
+		{"a_metrics": map[string]any{"like_count": 99.0}, "like_count": 5.0},
+		{"z_metrics": map[string]any{"like_count": 99.0}, "like_count": 5.0},
+	} {
+		if got := stats(m, nil)["likes"]; got != 5 {
+			t.Errorf("the top-level number wins: %v from %v", got, m)
+		}
+	}
+}
+
+func TestReportCanRankByARawName(t *testing.T) {
+	l := newLedger(t)
+	a := rec(t, l, postlog.Entry{Platform: "reddit", RemoteID: "r1", Text: "high score", At: ago(2 * time.Hour)})
+	b := rec(t, l, postlog.Entry{Platform: "reddit", RemoteID: "r2", Text: "low score", At: ago(1 * time.Hour)})
+	l.AddSnapshot(postlog.Snapshot{PostID: a.ID, Data: map[string]any{"score": 500.0, "num_comments": 20.0}})
+	l.AddSnapshot(postlog.Snapshot{PostID: b.ID, Data: map[string]any{"score": 5.0, "num_comments": 90.0}})
+	_, out, _ := do(t, "", "report", "--by", "score")
+	top := jsonOut(t, out).(map[string]any)["top"].([]any)
+	if len(top) != 2 || top[0].(map[string]any)["remote_id"] != "r1" || top[0].(map[string]any)["score"].(float64) != 500 {
+		t.Errorf("a raw name such as score ranks the posts: %v", top)
+	}
+	_, out, _ = do(t, "", "report", "--by", "comments")
+	if top = jsonOut(t, out).(map[string]any)["top"].([]any); top[0].(map[string]any)["remote_id"] != "r2" {
+		t.Errorf("and a canonical name still does: %v", top)
 	}
 }

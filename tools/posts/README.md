@@ -52,6 +52,35 @@ words from another account, or as a reply to a different post, are not a repeat.
   **was published**, with its id.
 - A failed post is not recorded, so retrying it is allowed.
 
+## Metrics: one vocabulary
+
+Every post carries its latest reading twice: `metrics` exactly as the platform gave
+it, and `stats` in one vocabulary, so X's `impression_count`, YouTube's `viewCount`
+(a string) and Instagram's `like_count` can be compared and added up:
+
+| Name | Read from, among others |
+| --- | --- |
+| `views` | `impression_count` (X), `viewCount` (YouTube), `views` (Instagram) |
+| `likes` | `like_count`, `likeCount`, `likes` |
+| `comments` | `reply_count` (X), `comments_count` (Instagram), `commentCount`, `num_comments` (Reddit) |
+| `shares` | `repost_count` (X), `shares` |
+| `saves` | `bookmark_count` (X), `saved` (Instagram) |
+| `quotes`, `reach` | `quote_count`; `reach` |
+
+Numbers sent as strings are read as numbers, and a number one level down (X's raw
+`public_metrics`) is found. A name that already is one of the above wins over an
+alias. Anything else stays in `metrics`, and `report --by` can still rank by it
+(`--by score` for Reddit). To map a platform's own name, add it to your config:
+
+```toml
+[posts.metrics.rename]
+clicks = "views"
+```
+
+`list`, `show` and `find` show `stats`; `report` totals, averages and ranks them.
+Only each post's **latest** reading counts, and older readings stay in `show` as a
+history.
+
 ## Commands
 
 | Command | Does |
@@ -74,9 +103,21 @@ that metric.
 
 ## Refreshing metrics
 
-`refresh` runs one command per platform and stores what it prints. The default for X
-is `x thread {remote_id} --account {account}`, keeping the `tweet` part of its
-output. To change it or add a platform, put a table in your shared config
+`refresh` runs one command per platform and stores what it prints. These are the
+defaults, all read-only calls to tools in this repository:
+
+| Platform | Default command | Gives |
+| --- | --- | --- |
+| `x` | `x thread {remote_id}` | views, likes, comments, shares, saves, quotes |
+| `instagram` | `instagram metrics {remote_id}` | likes and comments; views, reach, saves, shares if the token may read insights |
+| `youtube` | `youtube call videos --param id={remote_id}` | views, likes, comments (for a video recorded with `posts add`) |
+| `reddit` | `reddit call post_comments --param id={remote_id}` | score and comments (for a post recorded with `posts add`) |
+
+LinkedIn has none: reading a post's numbers there needs the `r_member_postAnalytics`
+permission, part of a restricted API product that needs LinkedIn's approval and that
+the `linkedin` tool does not use. If you get that access, add a command for it below.
+
+To change a default or add a platform, put a table in your shared config
 (`~/.config/agent-tools/config.toml`):
 
 ```toml
@@ -94,8 +135,31 @@ select  = "tweet"          # which part of the JSON output to keep; optional
 - `command = []` switches a platform off.
 - The command comes **only from the config file**, never from a flag or an MCP
   argument, so an assistant cannot make `refresh` run anything of its own.
-- Instagram and LinkedIn have no metrics command: their tools do not read metrics
-  yet. Add one when they do, or store numbers with `posts metrics`.
+- A platform with no command is skipped; store numbers for it with `posts metrics`.
+
+### Keeping them up to date
+
+`posts refresh --stale 6h` skips a post that already has a reading newer than six
+hours, so it is safe to run on a schedule: each run reads only what has gone stale.
+A user timer does it (`~/.config/systemd/user/posts-refresh.service` and `.timer`):
+
+```ini
+# posts-refresh.service
+[Service]
+Type=oneshot
+ExecStart=%h/.cargo/bin/posts refresh --stale 6h --since 14d
+
+# posts-refresh.timer
+[Timer]
+OnCalendar=*-*-* 00/6:15:00
+Persistent=true
+[Install]
+WantedBy=timers.target
+```
+
+Enable it with `systemctl --user enable --now posts-refresh.timer`. Each run calls the
+platforms' APIs once per stale post, so keep `--since` short: a post's numbers settle
+within days.
 
 ## MCP
 

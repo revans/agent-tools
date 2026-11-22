@@ -210,7 +210,7 @@ safety = "write"
 
 [[tool]]
 name = "posts_refresh"
-description = "Read fresh metrics for recent posts by running the read-only command configured for each platform (by default x thread for X), and store the readings. Platforms with no configured command are skipped. It reads from the platform's API and writes to the log; it never publishes. Give one id, or filter by platform and age."
+description = "Read fresh metrics (views, likes, comments, shares, saves) for recent posts by running the read-only command configured for each platform (by default x thread for X, instagram metrics for Instagram, and the youtube and reddit tools for posts recorded with posts_add), and store the readings. Platforms with no configured command are skipped. It reads from the platform's API and writes to the log; it never publishes. Give one id, or filter by platform and age."
 bin = "posts"
 args = ["refresh"]
 safety = "write"
@@ -241,3 +241,9 @@ timeout = "600s"
   type = "integer"
   flag = "--limit"
   description = "At most this many posts, newest first (default 20)."
+  [[tool.param]]
+  name = "stale"
+  type = "string"
+  flag = "--stale"
+  example = "6h"
+  description = "Skip a post that already has a reading newer than this (6h, 1d). Use it when refreshing on a schedule, to avoid repeating work."

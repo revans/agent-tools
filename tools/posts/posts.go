@@ -22,8 +22,11 @@ var validKinds = map[string]bool{"post": true, "reply": true, "comment": true}
 // view is an entry with its latest metrics reading, for output.
 type view struct {
 	postlog.Entry
-	Metrics   any        `json:"metrics,omitempty"`
-	MetricsAt *time.Time `json:"metrics_at,omitempty"`
+	// Stats is the latest reading in one vocabulary (views, likes, comments, ...);
+	// Metrics is the same reading exactly as the platform gave it.
+	Stats     map[string]any `json:"stats,omitempty"`
+	Metrics   any            `json:"metrics,omitempty"`
+	MetricsAt *time.Time     `json:"metrics_at,omitempty"`
 }
 
 func readLedger() (*postlog.Log, *postlog.Data, error) {
@@ -43,7 +46,7 @@ func latest(d *postlog.Data) map[string]postlog.Snapshot {
 	return m
 }
 
-func views(es []postlog.Entry, d *postlog.Data) []view {
+func views(es []postlog.Entry, d *postlog.Data, rename map[string]string) []view {
 	last := latest(d)
 	out := make([]view, 0, len(es))
 	for _, e := range es {
@@ -51,6 +54,7 @@ func views(es []postlog.Entry, d *postlog.Data) []view {
 		if s, ok := last[e.ID]; ok {
 			at := s.At
 			v.Metrics, v.MetricsAt = s.Data, &at
+			v.Stats = whole(stats(s.Data, rename))
 		}
 		out = append(out, v)
 	}
@@ -114,7 +118,11 @@ func listCmd() *command {
 			if err != nil {
 				return nil, err
 			}
-			return views(es, d), nil
+			st, err := loadSettings(c.config)
+			if err != nil {
+				return nil, err
+			}
+			return views(es, d, st.rename), nil
 		},
 	}
 }
@@ -141,7 +149,11 @@ func showCmd() *command {
 				}
 			}
 			sort.SliceStable(snaps, func(i, j int) bool { return snaps[i].At.Before(snaps[j].At) })
-			return map[string]any{"post": views([]postlog.Entry{*e}, d)[0], "snapshots": snaps}, nil
+			st, err := loadSettings(c.config)
+			if err != nil {
+				return nil, err
+			}
+			return map[string]any{"post": views([]postlog.Entry{*e}, d, st.rename)[0], "snapshots": snaps}, nil
 		},
 	}
 }
@@ -181,7 +193,11 @@ func findCmd() *command {
 					hit = append(hit, e)
 				}
 			}
-			return views(hit, d), nil
+			st, err := loadSettings(c.config)
+			if err != nil {
+				return nil, err
+			}
+			return views(hit, d, st.rename), nil
 		},
 	}
 }
@@ -280,64 +296,100 @@ type refreshSpec struct {
 	Select  string
 }
 
-// defaultRefresh is what works with the tools in this repository.
+// defaultRefresh is what works with the tools in this repository. X and Instagram
+// are the publishing tools; YouTube and Reddit are for posts recorded with
+// `posts add`. LinkedIn has none: reading a post's numbers there needs an approved
+// API product that its tool does not use.
 var defaultRefresh = map[string]refreshSpec{
-	"x": {Command: []string{"x", "thread", "{remote_id}", "--account", "{account}"}, Select: "tweet"},
+	"x":         {Command: []string{"x", "thread", "{remote_id}", "--account", "{account}"}, Select: "tweet"},
+	"instagram": {Command: []string{"instagram", "metrics", "{remote_id}", "--account", "{account}"}},
+	"youtube":   {Command: []string{"youtube", "call", "videos", "--param", "id={remote_id}", "--account", "{account}"}, Select: "[0].statistics"},
+	"reddit":    {Command: []string{"reddit", "call", "post_comments", "--param", "id={remote_id}", "--account", "{account}"}, Select: "[0].data.children[0].data"},
 }
 
-// loadRefresh reads [posts.refresh.PLATFORM] from the config over the defaults.
-// No config file is fine. An empty command switches a platform off.
-func loadRefresh(configPath string) (map[string]refreshSpec, string, error) {
-	out := map[string]refreshSpec{}
+// settings are the [posts] table of the config: how to refresh, and any renames
+// for the metrics vocabulary.
+type settings struct {
+	refresh map[string]refreshSpec
+	rename  map[string]string
+	path    string
+}
+
+// loadSettings reads [posts.refresh.PLATFORM] and [posts.metrics.rename] from the
+// config over the defaults. No config file is fine. An empty command switches a
+// platform off.
+func loadSettings(configPath string) (*settings, error) {
+	st := &settings{refresh: map[string]refreshSpec{}, rename: map[string]string{}}
 	for k, v := range defaultRefresh {
-		out[k] = v
+		st.refresh[k] = v
 	}
 	cfg, err := apikit.NewLocator("posts").Load("posts", configPath)
 	if err != nil {
 		if errors.Is(err, apikit.ErrNoConfig) {
-			return out, "", nil
+			return st, nil
 		}
-		return nil, "", err
+		return nil, err
+	}
+	st.path = cfg.Path
+	where := cfg.WhereDefined()
+	if raw, ok := cfg.Settings["metrics"]; ok {
+		tbl, ok := raw.(map[string]any)
+		if !ok {
+			return nil, fmt.Errorf("%s: metrics must be a table", where)
+		}
+		if rn, ok := tbl["rename"]; ok {
+			m, ok := rn.(map[string]any)
+			if !ok {
+				return nil, fmt.Errorf("%s: metrics.rename must be a table of raw name = canonical name", where)
+			}
+			for k, v := range m {
+				to, ok := v.(string)
+				if !ok || to == "" {
+					return nil, fmt.Errorf("%s: metrics.rename.%s must be a name such as \"views\"", where, k)
+				}
+				st.rename[strings.ToLower(k)] = to
+			}
+		}
 	}
 	raw, ok := cfg.Settings["refresh"]
 	if !ok {
-		return out, cfg.Path, nil
+		return st, nil
 	}
 	tbl, ok := raw.(map[string]any)
 	if !ok {
-		return nil, "", fmt.Errorf("%s: refresh must be a table of platforms", cfg.WhereDefined())
+		return nil, fmt.Errorf("%s: refresh must be a table of platforms", where)
 	}
 	for platform, v := range tbl {
 		spec, ok := v.(map[string]any)
 		if !ok {
-			return nil, "", fmt.Errorf("%s: refresh.%s must be a table with a command", cfg.WhereDefined(), platform)
+			return nil, fmt.Errorf("%s: refresh.%s must be a table with a command", where, platform)
 		}
 		var rs refreshSpec
 		if cmd, ok := spec["command"]; ok {
 			list, ok := cmd.([]any)
 			if !ok {
-				return nil, "", fmt.Errorf("%s: refresh.%s.command must be a list of strings, not a shell line", cfg.WhereDefined(), platform)
+				return nil, fmt.Errorf("%s: refresh.%s.command must be a list of strings, not a shell line", where, platform)
 			}
 			for _, a := range list {
 				s, ok := a.(string)
 				if !ok {
-					return nil, "", fmt.Errorf("%s: refresh.%s.command must be a list of strings", cfg.WhereDefined(), platform)
+					return nil, fmt.Errorf("%s: refresh.%s.command must be a list of strings", where, platform)
 				}
 				rs.Command = append(rs.Command, s)
 			}
 		}
 		if sel, ok := spec["select"]; ok {
 			if rs.Select, ok = sel.(string); !ok {
-				return nil, "", fmt.Errorf("%s: refresh.%s.select must be a string", cfg.WhereDefined(), platform)
+				return nil, fmt.Errorf("%s: refresh.%s.select must be a string", where, platform)
 			}
 		}
 		if len(rs.Command) == 0 {
-			delete(out, platform)
+			delete(st.refresh, platform)
 			continue
 		}
-		out[platform] = rs
+		st.refresh[platform] = rs
 	}
-	return out, cfg.Path, nil
+	return st, nil
 }
 
 // expand builds the argument list for one post. A placeholder is replaced inside
@@ -418,16 +470,19 @@ func (l *limitWriter) Write(p []byte) (int, error) {
 
 func refreshCmd() *command {
 	var f filter
+	var stale string
 	return &command{
-		name: "refresh", summary: "read fresh metrics for recent posts, using the commands in your config", usage: "refresh [ID] [--platform P] [--since 30d] [--limit N] [--dry-run]",
+		name: "refresh", summary: "read fresh metrics for recent posts, using the commands in your config", usage: "refresh [ID] [--platform P] [--since 30d] [--limit N] [--stale 6h] [--dry-run]",
 		setup: func(fs *flag.FlagSet) {
 			f.flags(fs, 20, "30d")
+			fs.StringVar(&stale, "stale", "", "skip a post that already has a reading newer than this (6h, 1d): lets a scheduled refresh avoid repeating work")
 		},
 		run: func(c *ctx) (any, error) {
-			specs, _, err := loadRefresh(c.config)
+			st, err := loadSettings(c.config)
 			if err != nil {
 				return nil, err
 			}
+			specs := st.refresh
 			l, d, err := readLedger()
 			if err != nil {
 				return nil, err
@@ -458,6 +513,13 @@ func refreshCmd() *command {
 				Command  []string `json:"command,omitempty"`
 				Data     any      `json:"data,omitempty"`
 			}
+			var freshAfter time.Time
+			if stale != "" {
+				if freshAfter, err = parseSince(stale, time.Now()); err != nil || freshAfter.IsZero() {
+					return nil, usage("--stale: %q is not a duration like 6h or 1d", stale)
+				}
+			}
+			last := latest(d)
 			results := []result{}
 			for _, e := range targets {
 				r := result{ID: e.ID, RemoteID: e.RemoteID, Platform: e.Platform}
@@ -467,6 +529,8 @@ func refreshCmd() *command {
 					r.Skipped = "no refresh command is configured for " + e.Platform
 				case e.Kind == "comment":
 					r.Skipped = "comments have no metrics to read"
+				case !freshAfter.IsZero() && last[e.ID].At.After(freshAfter):
+					r.Skipped = "already read " + time.Since(last[e.ID].At).Round(time.Minute).String() + " ago, newer than --stale " + stale
 				case c.dryRun:
 					r.Command, r.Skipped = expand(spec, e), "dry run"
 				default:
@@ -504,15 +568,15 @@ func whereCmd() *command {
 				}
 				out["posts"], out["snapshots"], out["skipped_lines"] = len(d.Entries), len(d.Snapshots), d.Skipped
 			}
-			specs, cfg, err := loadRefresh(c.config)
+			st, err := loadSettings(c.config)
 			if err != nil {
 				return nil, err
 			}
 			refresh := map[string][]string{}
-			for p, s := range specs {
+			for p, s := range st.refresh {
 				refresh[p] = s.Command
 			}
-			out["refresh"], out["config"] = refresh, cfg
+			out["refresh"], out["config"], out["rename"] = refresh, st.path, st.rename
 			return out, nil
 		},
 	}
