@@ -799,12 +799,18 @@ mod tests {
 
     #[test]
     fn a_leading_h1_becomes_a_header_block_and_the_rest_a_section() {
-        let b = header_blocks("# Weekly status update\n\n_Product flow · 2026-10-05_\n\n- **Built** 10").unwrap();
+        let b = header_blocks(
+            "# Weekly status update\n\n_Product flow · 2026-10-05_\n\n- **Built** 10",
+        )
+        .unwrap();
         assert_eq!(b[0]["type"], "header");
         assert_eq!(b[0]["text"]["type"], "plain_text");
         assert_eq!(b[0]["text"]["text"], "Weekly status update");
         assert_eq!(b[1]["type"], "section");
-        assert_eq!(b[1]["text"]["text"], "_Product flow · 2026-10-05_\n\n• *Built* 10");
+        assert_eq!(
+            b[1]["text"]["text"],
+            "_Product flow · 2026-10-05_\n\n• *Built* 10"
+        );
         assert_eq!(b.as_array().unwrap().len(), 2);
     }
 
@@ -825,7 +831,10 @@ mod tests {
     #[test]
     fn header_text_loses_paired_emphasis_but_keeps_lone_underscores() {
         let b = header_blocks("# **Deploy** of `api` _today_ for snake_case_name").unwrap();
-        assert_eq!(b[0]["text"]["text"], "Deploy of api today for snake_case_name");
+        assert_eq!(
+            b[0]["text"]["text"],
+            "Deploy of api today for snake_case_name"
+        );
     }
 
     #[test]
@@ -839,8 +848,18 @@ mod tests {
     #[test]
     fn horizontal_rules_become_dividers_between_sections() {
         let b = header_blocks("# Title\n**2026-10-05**\n\n---\n\nBody\n\n---\nFooter").unwrap();
-        let kinds: Vec<&str> = b.as_array().unwrap().iter().map(|x| x["type"].as_str().unwrap()).collect();
-        assert_eq!(kinds, ["header", "section", "divider", "section", "divider", "section"]);
+        let kinds: Vec<&str> = b
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|x| x["type"].as_str().unwrap())
+            .collect();
+        assert_eq!(
+            kinds,
+            [
+                "header", "section", "divider", "section", "divider", "section"
+            ]
+        );
         assert_eq!(b[1]["text"]["text"], "*2026-10-05*");
         assert_eq!(b[5]["text"]["text"], "Footer");
     }
